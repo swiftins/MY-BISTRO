@@ -7,15 +7,26 @@ db_manager = DBManager(db_connector)
 food_order_manager = FoodOrderManager(db_manager)
 
 # Создание пользователя
-food_order_manager.create_user(123456, "john_doe", "John", "Doe")
+#food_order_manager.create_user(123456, "john_doe", "John", "Doe")
+telegram_id = 123456
+username = "john_doe"
+
+if food_order_manager.check_user_exists(telegram_id=telegram_id):
+    print("Пользователь с таким telegram_id уже существует.")
+elif food_order_manager.check_user_exists(username=username):
+    print("Пользователь с таким username уже существует.")
+else:
+    # Создание нового пользователя
+    food_order_manager.create_user(telegram_id, username, "John", "Doe")
+    print("Новый пользователь создан.")
 
 # Получение категорий меню
 categories = food_order_manager.get_menu_categories()
 print("Категории меню:", categories)
 
 # Получение блюд из категории
-menu_items = food_order_manager.get_menu_items(category_id=1)
-print("Блюда из категории 1:", menu_items)
+menu_items = food_order_manager.get_menu_items(category_id=None)
+print("Блюда из категории All:", menu_items)
 
 # Создание заказа
 user_id = "user_id_из_базы_данных"
