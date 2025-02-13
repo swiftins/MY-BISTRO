@@ -1,10 +1,9 @@
-from datetime import datetime
 from uuid import uuid4
 from db_module import *
 
 class FoodOrderManager:
-    def __init__(self, db_manager):
-        self.db_manager = db_manager
+    def __init__(self, param_db_manager: DBManager= None):
+        self.db_manager = param_db_manager
 
     def check_user_exists(self, telegram_id=None, username=None):
         """
