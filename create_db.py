@@ -9,3 +9,7 @@ for table,params in tables.items():
         print(f"Создание {table} прошло успешно")
     else:
         print(f"Ошибка создания {table}")
+
+
+schema.close()
+sqlite_conn.close()
