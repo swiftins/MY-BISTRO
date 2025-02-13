@@ -1,0 +1,59 @@
+3. Структура взаимосвязей таблиц в БД
+
+    users:
+
+        id (PK)
+
+        telegram_id
+
+        username
+
+    categories:
+
+        id (PK)
+
+        name
+
+    dishes:
+
+        id (PK)
+
+        name
+
+        price
+
+        category_id (FK -> categories.id)
+
+    orders:
+
+        id (PK)
+
+        user_id (FK -> users.id)
+
+        status
+
+        total_price
+
+        created_at
+
+    order_items:
+
+        id (PK)
+
+        order_id (FK -> orders.id)
+
+        dish_id (FK -> dishes.id)
+
+        quantity
+
+    feedbacks:
+
+        id (PK)
+
+        user_id (FK -> users.id)
+
+        dish_id (FK -> dishes.id)
+
+        comment
+
+        rating
