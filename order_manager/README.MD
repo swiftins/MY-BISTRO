@@ -53,6 +53,27 @@
   ```python
   food_order_manager.create_user(123456, "john_doe", "John", "Doe")
   ```
+### 2.1. **Проверка существования пользователя**
+- **`check_user_exists(telegram_id=None, username=None)`**  
+  Проверяет, существует ли пользователь с указанным `telegram_id` или `username`.  
+  **Пример:**
+  ```python
+  if food_order_manager.check_user_exists(telegram_id=123456):
+      print("Пользователь существует.")
+  else:
+      print("Пользователь не найден.")
+  ```
+### 2.2. **Получение пользователя по telegram_id**
+- **`get_user_by_telegram_id(telegram_id)`**  
+  Возвращает данные пользователя по его `telegram_id`.  
+  **Пример:**
+  ```python
+  user_data = food_order_manager.get_user_by_telegram_id(telegram_id=123456)
+  if user_data:
+      print("Данные пользователя:", user_data)
+  else:
+      print("Пользователь не найден.")
+  ```
 
 ### 3. **Работа с заказами**
 - **`create_order(user_id, status="pending", total_price=0)`**  

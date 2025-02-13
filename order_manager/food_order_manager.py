@@ -6,6 +6,29 @@ class FoodOrderManager:
     def __init__(self, db_manager):
         self.db_manager = db_manager
 
+    def check_user_exists(self, telegram_id=None, username=None):
+        """
+        Проверяет, существует ли пользователь с указанным telegram_id или username.
+        Возвращает True, если пользователь существует, иначе False.
+        """
+        if telegram_id:
+            query = "SELECT id FROM users WHERE telegram_id = ?"
+            params = (telegram_id,)
+        elif username:
+            query = "SELECT id FROM users WHERE username = ?"
+            params = (username,)
+        else:
+            raise ValueError("Необходимо указать telegram_id или username")
+
+        result = self.db_manager.fetch_data(query, params)
+        return bool(result)  # True, если пользователь найден, иначе False
+
+    def get_user_by_telegram_id(self, telegram_id):
+        """Получить пользователя по telegram_id."""
+        query = "SELECT * FROM users WHERE telegram_id = ?"
+        return self.db_manager.fetch_data(query, (telegram_id,))
+
+
     def get_menu_categories(self):
         """Получить все категории меню."""
         query = "SELECT * FROM menu_categories"
