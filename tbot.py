@@ -8,6 +8,9 @@ import csv
 # Инициализация бота
 bot = telebot.TeleBot("7918967502:AAGbpGfUYbw0M5QphKGF0TR-8jnDYJsjEmw")
 
+# Глобальная переменная для максимального количества порций
+number_of_seats = 5  # Максимальное количество порций
+
 # Инициализация менеджера заказов
 def init_fomanager(db_type='sqlite'):
     db_connector = DBConnector(db_type)
@@ -80,11 +83,15 @@ def select_item_quantity(message):
     # Сохраняем выбранное блюдо в user_data
     user_data[user_id] = {'selected_item': item_name}
 
-    # Запрашиваем количество
-    bot.send_message(message.chat.id, f"Сколько порций '{item_name}' вы хотите заказать? Введите число:")
+    # Создаем кнопки для выбора количества
+    markup = types.ReplyKeyboardMarkup(row_width=5)
+    for i in range(1, number_of_seats + 1):
+        markup.add(types.KeyboardButton(str(i)))
+
+    bot.send_message(message.chat.id, f"Сколько порций '{item_name}' вы хотите заказать?", reply_markup=markup)
 
 # Обработчик ввода количества
-@bot.message_handler(func=lambda message: message.text.isdigit())
+@bot.message_handler(func=lambda message: message.text.isdigit() and 1 <= int(message.text) <= number_of_seats)
 def add_item_to_order(message):
     user_id = message.from_user.id
     quantity = int(message.text)
@@ -109,6 +116,52 @@ def add_item_to_order(message):
 
     # Очищаем выбранное блюдо
     del user_data[user_id]['selected_item']
+
+    # Возвращаем пользователя к выбору категорий и добавляем кнопку "Оформить заказ"
+    show_menu_with_checkout(message.chat.id)
+    food_order_manager.db_manager.close()
+
+# Показать меню с кнопкой "Оформить заказ"
+def show_menu_with_checkout(chat_id):
+    food_order_manager = init_fomanager()
+    categories = food_order_manager.get_menu_categories()
+    markup = types.ReplyKeyboardMarkup(row_width=2)
+    for category in categories:
+        markup.add(types.KeyboardButton(category[1]))
+    markup.add(types.KeyboardButton('Оформить заказ'))
+    markup.add(types.KeyboardButton('Назад'))
+    bot.send_message(chat_id, "Выберите категорию или оформите заказ:", reply_markup=markup)
+    food_order_manager.db_manager.close()
+
+# Обработчик оформления заказа
+@bot.message_handler(func=lambda message: message.text == 'Оформить заказ')
+def checkout_order(message):
+    user_id = message.from_user.id
+
+    if 'order_id' not in user_data.get(user_id, {}):
+        bot.send_message(message.chat.id, "Ваш заказ пуст.")
+        return
+
+    food_order_manager = init_fomanager()
+    order_id = user_data[user_id]['order_id']
+
+    # Получаем информацию о заказе
+    order_items = food_order_manager.get_order_items(order_id)
+    total_price = sum(item[1] * item[2] for item in order_items)  # price * quantity
+
+    # Формируем сообщение с заказом
+    order_message = "Ваш заказ:\n"
+    for item in order_items:
+        order_message += f"{item[0]} - {item[2]} шт. - {item[1] * item[2]} руб.\n"
+    order_message += f"Итого: {total_price} руб."
+
+    bot.send_message(message.chat.id, order_message)
+
+    # Очищаем заказ
+    del user_data[user_id]['order_id']
+
+    # Возвращаем пользователя в главное меню
+    show_main_menu(message.chat.id)
     food_order_manager.db_manager.close()
 
 # Показать заказы пользователя
