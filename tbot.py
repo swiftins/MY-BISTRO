@@ -137,6 +137,7 @@ def show_menu_with_checkout(chat_id):
 @bot.message_handler(func=lambda message: message.text == 'Оформить заказ')
 def checkout_order(message):
     user_id = message.from_user.id
+    print(f"{user_id} - Нажал 'Оформить заказ'")
 
     if 'order_id' not in user_data.get(user_id, {}):
         bot.send_message(message.chat.id, "Ваш заказ пуст.")
@@ -169,6 +170,7 @@ def checkout_order(message):
 def show_user_orders(message):
     food_order_manager = init_fomanager()
     user_id = message.from_user.id
+    print(f"{user_id} - Нажал 'Мои заказы'")
     orders = food_order_manager.get_user_orders(user_id)
     if orders:
         for order in orders:
