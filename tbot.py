@@ -9,23 +9,18 @@ import csv
 bot = telebot.TeleBot("7918967502:AAGbpGfUYbw0M5QphKGF0TR-8jnDYJsjEmw")
 
 # Инициализация менеджера заказов
-# db_connector = DBConnector('sqlite')
-# db_manager = DBManager(db_connector)
-# food_order_manager = FoodOrderManager(db_manager)
-
-# Состояния для обработки заказов
-user_data = {}
 def init_fomanager(db_type='sqlite'):
     db_connector = DBConnector(db_type)
     db_manager = DBManager(db_connector)
     return FoodOrderManager(db_manager)
 
+# Состояния для обработки заказов
+user_data = {}
+
 # Команда старта
 @bot.message_handler(commands=['start'])
 def start(message):
-
     food_order_manager = init_fomanager()
-
     user_id = message.from_user.id
     username = message.from_user.username
     first_name = message.from_user.first_name
@@ -76,25 +71,44 @@ def show_category_items(message):
     bot.send_message(message.chat.id, "Выберите блюдо:", reply_markup=markup)
     food_order_manager.db_manager.close()
 
-# Создание заказа
+# Обработчик выбора блюда
 @bot.message_handler(func=lambda message: message.text.endswith('руб.'))
-def add_item_to_order(message):
-    food_order_manager = init_fomanager()
-    item_name = message.text.split(' - ')[0]
+def select_item_quantity(message):
     user_id = message.from_user.id
-    order_id = str(uuid.uuid4())
+    item_name = message.text.split(' - ')[0]
+
+    # Сохраняем выбранное блюдо в user_data
+    user_data[user_id] = {'selected_item': item_name}
+
+    # Запрашиваем количество
+    bot.send_message(message.chat.id, f"Сколько порций '{item_name}' вы хотите заказать? Введите число:")
+
+# Обработчик ввода количества
+@bot.message_handler(func=lambda message: message.text.isdigit())
+def add_item_to_order(message):
+    user_id = message.from_user.id
+    quantity = int(message.text)
+
+    if user_id not in user_data or 'selected_item' not in user_data[user_id]:
+        bot.send_message(message.chat.id, "Ошибка: блюдо не выбрано.")
+        return
+
+    food_order_manager = init_fomanager()
+    item_name = user_data[user_id]['selected_item']
+    item = next(item for item in food_order_manager.get_menu_items() if item[2] == item_name)
 
     # Создание заказа, если его еще нет
-    if user_id not in user_data:
-        user_data[user_id] = {'order_id': order_id, 'items': []}
+    if 'order_id' not in user_data[user_id]:
+        order_id = str(uuid.uuid4())
+        user_data[user_id]['order_id'] = order_id
         food_order_manager.create_order(user_id, total_price=0)
 
     # Добавление блюда в заказ
-    item = next(item for item in food_order_manager.get_menu_items() if item[2] == item_name)
-    user_data[user_id]['items'].append(item)
-    food_order_manager.add_item_to_order(user_data[user_id]['order_id'], item[0], 1)
+    food_order_manager.add_item_to_order(user_data[user_id]['order_id'], item[0], quantity)
+    bot.send_message(message.chat.id, f"{quantity} порций '{item_name}' добавлено в заказ!")
 
-    bot.send_message(message.chat.id, f"{item_name} добавлен в заказ!")
+    # Очищаем выбранное блюдо
+    del user_data[user_id]['selected_item']
     food_order_manager.db_manager.close()
 
 # Показать заказы пользователя
