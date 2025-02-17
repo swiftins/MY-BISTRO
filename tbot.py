@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 import telebot
 from telebot import types
 from order_manager import FoodOrderManager, init_fo_manager
@@ -27,6 +28,21 @@ number_of_seats = 8  # Максимальное количество порци�
 # Состояния для обработки заказов
 sessions = {}
 user_data = {}
+# Инициирование события /start программно
+def trigger_start(chat_id):
+    # Создаем фейковое сообщение
+    class FakeMessage:
+        def __init__(self, message):
+            self.chat = SimpleNamespace(id=message.chat.id)
+            self.text = '/start'
+            self.from_user = types.User(id= message.chat.id,
+                                        is_bot=False,
+                                        first_name=message.from_user.first_name,
+                                        last_name=message.from_user.last_name,
+                                        username=message.from_user.username)
+
+    # Вызываем обработчик как будто это сообщение от пользователя
+    start(FakeMessage(chat_id))
 
 # Команда старта
 @bot.message_handler(commands=['start'])
@@ -79,6 +95,9 @@ def show_category_items(message):
 # Обработчик выбора блюда
 @bot.message_handler(func=lambda message: message.text.endswith('руб.'))
 def select_item_quantity(message):
+    if len(user_data)==0:
+        trigger_start(message)
+        return False
     make_quantity_dialog(bot, message, user_data)
     # food_order_manager = init_fo_manager()
     # user_id = message.from_user.id

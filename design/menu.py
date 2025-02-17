@@ -31,9 +31,11 @@ def show_menu_category_items(bot,message,items,user_data):
     user_data[message.from_user.id].update( {"step": "Item_menu", "category": items[0][1]})
     pass
 
-def select_quantity(bot,message,item_name,image_path=None,number_of_seats = 8):
-    keyboard = create_inline_kbd(row_width=4,nums=number_of_seats)
+def select_quantity(bot,message,item_name,image_path=None,number_of_seats = 8,msg = ["",""]):
+    keyboard = create_inline_kbd(row_width=4,nums=number_of_seats,msg=msg)
     if image_path is not None:
+        if not os.path.exists(image_path):#and os.path.isfile(file_path):
+            image_path = os.path.join('img', 'empty.jpg')
         with open(image_path, 'rb') as photo:
             bot.send_photo(message.chat.id,
                            photo=photo,
@@ -63,9 +65,10 @@ def make_quantity_dialog(bot,message,user_data):
     food_order_manager = init_fo_manager()
     user_id = message.from_user.id
     item_name = message.text.split(' - ')[0]
-    item_ifo = food_order_manager.get_menu_item_id_by_name(item_name)
-    item_id=item_ifo[0]
-    item_category = food_order_manager.get_menu_categories(item_id[1])[0][1]
+    item_info = food_order_manager.get_menu_item_id_by_name(item_name)[0]
+    item_id=item_info[0]
+    item_category = food_order_manager.get_menu_categories(item_info[1])[0][1]
+    item_caption = f"<u><b>{item_name} </b>\n- {item_info[4]} руб.\n{item_info[3]}</u>"
     user_data[user_id]['selected_item'] = item_name
     user_data[user_id]["step"] = "Item_quantity"
     user_data[user_id]["item_id"]= item_id
@@ -75,4 +78,4 @@ def make_quantity_dialog(bot,message,user_data):
     print(user_data)
     image_path = os.path.join('img', folder, file)
     print(user_data)
-    select_quantity(bot, message, item_name, image_path=image_path)
+    select_quantity(bot, message, item_caption, image_path=image_path,  msg=["","шт."])

@@ -83,7 +83,7 @@ def create_reply_kbd(row_width=2, values=[], back ="X"):
     create_tile_kbd(keyboard, row_width=row_width, msg=["Категория ", ""], values=values, back=back)
     return keyboard
 
-def create_inline_kbd(row_width=3, nums=3, values=None):
+def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""]):
     """
     Создает Inline клавиатуру с плиточными кнопками.
 
