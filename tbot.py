@@ -4,7 +4,7 @@ from order_manager import FoodOrderManager
 from db_module import DBConnector, DBManager
 import uuid
 import csv
-from design import show_main_menu
+from design import show_main_menu, show_menu_categories, show_menu_category_items
 
 # Инициализация бота
 TOKEN = '7265481895:AAEiGtEWswZa-Jz0CMf63j-zn9-wWcaOzME'
@@ -45,20 +45,18 @@ def start(message):
         bot.send_message(message.chat.id, f"👏С возвращением, {full_name} !🤗")
 
     # Отправка главного меню
-    show_main_menu(bot,message.chat.id)
+    show_main_menu(bot,message,user_data)
     food_order_manager.db_manager.close()
+    print(user_data)
 
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
 def show_menu(message):
     food_order_manager = init_fomanager()
     categories = food_order_manager.get_menu_categories()
-    markup = types.ReplyKeyboardMarkup(row_width=2)
-    for category in categories:
-        markup.add(types.KeyboardButton(category[1]))
-    markup.add(types.KeyboardButton('Назад'))
-    bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=markup)
+    show_menu_categories(bot,message,categories,user_data)
     food_order_manager.db_manager.close()
+    print(user_data)
 
 # Показать блюда в категории
 @bot.message_handler(func=lambda message: message.text in [category[1] for category in init_fomanager().get_menu_categories()])
@@ -67,11 +65,12 @@ def show_category_items(message):
     category_name = message.text
     category_id = next(category[0] for category in food_order_manager.get_menu_categories() if category[1] == category_name)
     items = food_order_manager.get_menu_items(category_id=category_id)
-    markup = types.ReplyKeyboardMarkup(row_width=2)
-    for item in items:
-        markup.add(types.KeyboardButton(f"{item[2]} - {item[4]} руб."))
-    markup.add(types.KeyboardButton('Назад'))
-    bot.send_message(message.chat.id, "Выберите блюдо:", reply_markup=markup)
+    show_menu_category_items(bot,message,items, user_data)
+    # markup = types.ReplyKeyboardMarkup(row_width=2)
+    # for item in items:
+    #     markup.add(types.KeyboardButton(f"{item[2]} - {item[4]} руб."))
+    # markup.add(types.KeyboardButton('Назад'))
+    # bot.send_message(message.chat.id, "Выберите блюдо:", reply_markup=markup)
     food_order_manager.db_manager.close()
 
 # Обработчик выбора блюда

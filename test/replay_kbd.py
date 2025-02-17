@@ -89,7 +89,7 @@ def create_inline_kbd(row_width=3, nums=3, values = None):
 # Обработчик команды /start
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    image_path = os.path.join('img', 'zap_brok.jpg')
+    image_path = os.path.join('img', 'salmon.jpg')
     # keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=9)
     #
     # create_tile_kbd(keyboard,msg=["Категория ",""])
@@ -98,11 +98,11 @@ def start_message(message):
 
 
     image_kbd = types.InlineKeyboardMarkup(row_width=3)
-    create_tile_kbd(image_kbd,msg=["",'шт.'])
+    create_tile_kbd(image_kbd,row_width=4,msg=["",'шт.'],nums=9)
     with open(image_path, 'rb') as photo:
         bot.send_photo(message.chat.id,
                        photo=photo,
-                       caption="Это локальное изображение с набором кнопок",
+                       caption="Это изображение блюда с набором кнопок",
                        reply_markup=image_kbd)
 
     bot.send_message(message.chat.id, "Выбери кнопку:", reply_markup=keyboard)
