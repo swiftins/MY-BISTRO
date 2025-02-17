@@ -4,9 +4,12 @@ from order_manager import FoodOrderManager
 from db_module import DBConnector, DBManager
 import uuid
 import csv
+from design import show_main_menu
 
 # Инициализация бота
-bot = telebot.TeleBot("7918967502:AAGbpGfUYbw0M5QphKGF0TR-8jnDYJsjEmw")
+TOKEN = '7265481895:AAEiGtEWswZa-Jz0CMf63j-zn9-wWcaOzME'
+#TOKEN = "7918967502:AAGbpGfUYbw0M5QphKGF0TR-8jnDYJsjEmw"
+bot = telebot.TeleBot(TOKEN)
 
 # Глобальная переменная для максимального количества порций
 number_of_seats = 5  # Максимальное количество порций
@@ -28,25 +31,22 @@ def start(message):
     username = message.from_user.username
     first_name = message.from_user.first_name
     last_name = message.from_user.last_name
+    full_name = first_name + " " + last_name
+    if full_name == " ":
+        full_name = "Инкогнито 😎"
 
     # Проверка, существует ли пользователь
     if not food_order_manager.check_user_exists(telegram_id=user_id):
-        food_order_manager.create_user(user_id, username, first_name, last_name)
-        bot.send_message(message.chat.id, "Вы успешно зарегистрированы!")
+        if food_order_manager.create_user(user_id, username, first_name, last_name):
+            bot.send_message(message.chat.id, f"😀 {full_name}, Вы успешно зарегистрированы!👍")
+        else:
+            raise
     else:
-        bot.send_message(message.chat.id, "С возвращением!")
+        bot.send_message(message.chat.id, f"👏С возвращением, {full_name} !🤗")
 
     # Отправка главного меню
-    show_main_menu(message.chat.id)
+    show_main_menu(bot,message.chat.id)
     food_order_manager.db_manager.close()
-
-# Показать главное меню
-def show_main_menu(chat_id):
-    markup = types.ReplyKeyboardMarkup(row_width=2)
-    btn_menu = types.KeyboardButton('Меню')
-    btn_orders = types.KeyboardButton('Мои заказы')
-    markup.add(btn_menu, btn_orders)
-    bot.send_message(chat_id, "Выберите действие:", reply_markup=markup)
 
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
