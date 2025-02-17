@@ -21,7 +21,7 @@ def show_menu_categories(bot,message,categories,user_data):
     category = [row[1] for row in categories]
     keyboard = create_reply_kbd(row_width=3, values=category, back="Назад")
     bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=keyboard)
-    user_data[message.from_user.id].update( {"step" : "Category_menu"})
+    user_data[message.from_user.id]["step"]= "Category_menu"
     pass
 
 def show_menu_category_items(bot,message,items,user_data):

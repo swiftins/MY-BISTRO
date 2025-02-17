@@ -7,3 +7,8 @@ from .menu import (show_main_menu,
                    make_menu_category_items,
                    make_quantity_dialog
                    )
+menu_tree_previous = {
+    "Category_menu": ["Main_menu",show_main_menu],
+    "Item_menu": ["Category_menu",make_menu_categories],
+    "Item_quantity": ["Item_menu",make_menu_category_items],
+}

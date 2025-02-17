@@ -9,7 +9,8 @@ import csv
 from design import show_main_menu, show_menu_categories, show_menu_category_items, select_quantity
 from design import (make_menu_categories,
                     make_menu_category_items,
-                    make_quantity_dialog)
+                    make_quantity_dialog,
+                    menu_tree_previous)
 
 # Инициализация бота
 TOKEN = '7265481895:AAEiGtEWswZa-Jz0CMf63j-zn9-wWcaOzME'
@@ -84,6 +85,9 @@ def show_menu(message):
 # Показать блюда в категории
 @bot.message_handler(func=lambda message: message.text in [category[1] for category in init_fo_manager().get_menu_categories()])
 def show_category_items(message):
+    if len(user_data)==0:
+        trigger_start(message)
+        return False
     make_menu_category_items(bot, message, user_data)
     # food_order_manager = init_fo_manager()
     # category_name = message.text
@@ -99,31 +103,14 @@ def select_item_quantity(message):
         trigger_start(message)
         return False
     make_quantity_dialog(bot, message, user_data)
-    # food_order_manager = init_fo_manager()
-    # user_id = message.from_user.id
-    # item_name = message.text.split(' - ')[0]
-    # item_id = food_order_manager.get_menu_item_id_by_name(item_name)[0]
-    #
-    # # Сохраняем выбранное блюдо в user_data
-    # user_data[user_id] = {'selected_item': item_name}
-    # user_data[user_id] = {"step": "Item_quantity"}
-    # user_data[user_id] = {"item_id": item_id}
-    # image_path = os.path.join('img', 'zap_kab.jpg')
-    # print(user_data)
-    # select_quantity(bot,message,item_name,image_path=image_path)
-
-    # Создаем кнопки для выбора количества
-    # markup = types.ReplyKeyboardMarkup(row_width=5)
-    # for i in range(1, number_of_seats + 1):
-    #     markup.add(types.KeyboardButton(str(i)))
-    #
-    # bot.send_message(message.chat.id, f"Сколько порций '{item_name}' вы хотите заказать?", reply_markup=markup)
 
 # Обработчик ввода количества
-@bot.message_handler(func=lambda message: message.text.isdigit() and 1 <= int(message.text) <= number_of_seats)
+#@bot.message_handler(func=lambda message: message.text.endswith('шт.'))
+@bot.message_handler(func=lambda message: message.text.isdigit() and 1<=int(message.text) <= number_of_seats)
 def add_item_to_order(message):
     user_id = message.from_user.id
     quantity = int(message.text)
+    print (user_data)
 
     if user_id not in user_data or 'selected_item' not in user_data[user_id]:
         bot.send_message(message.chat.id, "Ошибка: блюдо не выбрано.")
@@ -194,6 +181,17 @@ def checkout_order(message):
     show_main_menu(message.chat.id)
     food_order_manager.db_manager.close()
 
+@bot.message_handler(func=lambda message: message.text == 'X' or message.text == 'Назад' or message.text == '0')
+def go_back(message):
+    if len(user_data)==0:
+        trigger_start(message)
+        return False
+    print(user_data)
+    usr_data = user_data[message.from_user.id]
+    previous_step = menu_tree_previous[usr_data["step"]][0]
+    previous_menu = menu_tree_previous[usr_data["step"]][1]
+    previous_menu(bot, message, user_data)
+
 # Показать заказы пользователя
 @bot.message_handler(func=lambda message: message.text == 'Мои заказы')
 def show_user_orders(message):
@@ -225,6 +223,36 @@ def handle_csv(message):
         bot.send_message(message.chat.id, "CSV файл успешно загружен.")
     else:
         bot.send_message(message.chat.id, "Пожалуйста, загрузите CSV файл.")
+
+@bot.message_handler(func=lambda message: True)
+def handle_unprocessed_messages(message):
+    print(f"Необработанное сообщение от {message.from_user.username or message.from_user.first_name}: {message.text}")
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callback_query(call):
+    print(f"Callback query from {call.from_user.username or call.from_user.first_name}: {call.data}")
+    user_id = call.from_user.id
+    quantity = int(call.data)
+    print(user_data)
+
+    if user_id not in user_data or 'selected_item' not in user_data[user_id]:
+        bot.send_message(call.chat.id, "Ошибка: блюдо не выбрано.")
+        return
+
+    food_order_manager = init_fo_manager()
+    item_name = user_data[user_id]['selected_item']
+    item = next(item for item in food_order_manager.get_menu_items() if item[2] == item_name)
+
+    # Создание заказа, если его еще нет
+    if 'order_id' not in user_data[user_id]:
+        order_id = str(uuid.uuid4())
+        user_data[user_id]['order_id'] = order_id
+        food_order_manager.create_order(user_id, total_price=0)
+
+    # Добавление блюда в заказ
+    food_order_manager.add_item_to_order(user_data[user_id]['order_id'], item[0], quantity)
+    bot.send_message(call.chat.id, f"{quantity} порций '{item_name}' добавлено в заказ!")
+
 
 # Запуск бота
 bot.polling(none_stop=True)
