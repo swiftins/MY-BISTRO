@@ -3,8 +3,9 @@ from telebot import types
 from order_manager import FoodOrderManager
 from db_module import DBConnector, DBManager
 import uuid
+import os
 import csv
-from design import show_main_menu, show_menu_categories, show_menu_category_items
+from design import show_main_menu, show_menu_categories, show_menu_category_items, select_quantity
 
 # Инициализация бота
 TOKEN = '7265481895:AAEiGtEWswZa-Jz0CMf63j-zn9-wWcaOzME'
@@ -12,7 +13,7 @@ TOKEN = '7265481895:AAEiGtEWswZa-Jz0CMf63j-zn9-wWcaOzME'
 bot = telebot.TeleBot(TOKEN)
 
 # Глобальная переменная для максимального количества порций
-number_of_seats = 5  # Максимальное количество порций
+number_of_seats = 8  # Максимальное количество порций
 
 # Инициализация менеджера заказов
 def init_fomanager(db_type='sqlite'):
@@ -66,28 +67,29 @@ def show_category_items(message):
     category_id = next(category[0] for category in food_order_manager.get_menu_categories() if category[1] == category_name)
     items = food_order_manager.get_menu_items(category_id=category_id)
     show_menu_category_items(bot,message,items, user_data)
-    # markup = types.ReplyKeyboardMarkup(row_width=2)
-    # for item in items:
-    #     markup.add(types.KeyboardButton(f"{item[2]} - {item[4]} руб."))
-    # markup.add(types.KeyboardButton('Назад'))
-    # bot.send_message(message.chat.id, "Выберите блюдо:", reply_markup=markup)
     food_order_manager.db_manager.close()
 
 # Обработчик выбора блюда
 @bot.message_handler(func=lambda message: message.text.endswith('руб.'))
 def select_item_quantity(message):
+    food_order_manager = init_fomanager()
     user_id = message.from_user.id
     item_name = message.text.split(' - ')[0]
+    item_id = food_order_manager.get_menu_item_id_by_name(item_name)[0]
 
     # Сохраняем выбранное блюдо в user_data
     user_data[user_id] = {'selected_item': item_name}
+    user_data[user_id] = {"step": "Item_quantity"}
+    user_data[user_id] = {"item_id": item_id}
+    image_path = os.path.join('img', 'zap_kab.jpg')
+    select_quantity(bot,message,item_name,image_path=image_path)
 
     # Создаем кнопки для выбора количества
-    markup = types.ReplyKeyboardMarkup(row_width=5)
-    for i in range(1, number_of_seats + 1):
-        markup.add(types.KeyboardButton(str(i)))
-
-    bot.send_message(message.chat.id, f"Сколько порций '{item_name}' вы хотите заказать?", reply_markup=markup)
+    # markup = types.ReplyKeyboardMarkup(row_width=5)
+    # for i in range(1, number_of_seats + 1):
+    #     markup.add(types.KeyboardButton(str(i)))
+    #
+    # bot.send_message(message.chat.id, f"Сколько порций '{item_name}' вы хотите заказать?", reply_markup=markup)
 
 # Обработчик ввода количества
 @bot.message_handler(func=lambda message: message.text.isdigit() and 1 <= int(message.text) <= number_of_seats)

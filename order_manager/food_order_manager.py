@@ -42,6 +42,16 @@ class FoodOrderManager:
             query = "SELECT * FROM menu_items"
             return self.db_manager.fetch_data(query)
 
+    def get_menu_item_id_by_name(self, item_name=None):
+        """Получить блюдо меню по имени или все блюда."""
+        if item_name:
+            query = "SELECT * FROM menu_items WHERE name = ?"
+            return self.db_manager.fetch_data(query, (item_name,))
+        else:
+            query = "SELECT * FROM menu_items"
+            return self.db_manager.fetch_data(query)
+
+
     def create_user(self, telegram_id, username, first_name, last_name):
         """Создать нового пользователя."""
         user_id = str(uuid4())
