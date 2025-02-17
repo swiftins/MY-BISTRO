@@ -28,10 +28,14 @@ class FoodOrderManager:
         return self.db_manager.fetch_data(query, (telegram_id,))
 
 
-    def get_menu_categories(self):
+    def get_menu_categories(self, category_id=None):
         """Получить все категории меню."""
-        query = "SELECT * FROM menu_categories"
-        return self.db_manager.fetch_data(query)
+        if category_id:
+            query = "SELECT * FROM menu_categories WHERE id = ?"
+            return self.db_manager.fetch_data(query, (category_id,))
+        else:
+            query = "SELECT * FROM menu_categories"
+            return self.db_manager.fetch_data(query)
 
     def get_menu_items(self, category_id=None):
         """Получить все блюда меню или блюда из конкретной категории."""
@@ -106,3 +110,8 @@ class FoodOrderManager:
         """Удалить заказ."""
         query = "DELETE FROM orders WHERE id = ?"
         return self.db_manager.delete_data(query, (order_id,))
+
+def init_fo_manager(db_type='sqlite'):
+    db_connector = DBConnector(db_type)
+    db_manager = DBManager(db_connector)
+    return FoodOrderManager(db_manager)

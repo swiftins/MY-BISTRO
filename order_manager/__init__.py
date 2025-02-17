@@ -1,1 +1,1 @@
-from .food_order_manager import FoodOrderManager
+from .food_order_manager import FoodOrderManager, init_fo_manager

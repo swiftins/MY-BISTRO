@@ -95,6 +95,6 @@ def create_inline_kbd(row_width=3, nums=3, values=None):
     Возвращает:
     - Inline клавиатуру с добавленными кнопками.
     """
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=row_width)
+    keyboard = types.InlineKeyboardMarkup( row_width=row_width)
     create_tile_kbd(keyboard, row_width=row_width, nums=nums, msg=["", ""], values=values)
     return keyboard

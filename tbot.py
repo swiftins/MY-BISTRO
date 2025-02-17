@@ -1,11 +1,14 @@
 import telebot
 from telebot import types
-from order_manager import FoodOrderManager
+from order_manager import FoodOrderManager, init_fo_manager
 from db_module import DBConnector, DBManager
 import uuid
 import os
 import csv
 from design import show_main_menu, show_menu_categories, show_menu_category_items, select_quantity
+from design import (make_menu_categories,
+                    make_menu_category_items,
+                    make_quantity_dialog)
 
 # Инициализация бота
 TOKEN = '7265481895:AAEiGtEWswZa-Jz0CMf63j-zn9-wWcaOzME'
@@ -16,19 +19,21 @@ bot = telebot.TeleBot(TOKEN)
 number_of_seats = 8  # Максимальное количество порций
 
 # Инициализация менеджера заказов
-def init_fomanager(db_type='sqlite'):
-    db_connector = DBConnector(db_type)
-    db_manager = DBManager(db_connector)
-    return FoodOrderManager(db_manager)
+# def init_fo_manager(db_type='sqlite'):
+#     db_connector = DBConnector(db_type)
+#     db_manager = DBManager(db_connector)
+#     return FoodOrderManager(db_manager)
 
 # Состояния для обработки заказов
+sessions = {}
 user_data = {}
 
 # Команда старта
 @bot.message_handler(commands=['start'])
 def start(message):
-    food_order_manager = init_fomanager()
+    food_order_manager = init_fo_manager()
     user_id = message.from_user.id
+    user_data[user_id]={}
     username = message.from_user.username
     first_name = message.from_user.first_name
     last_name = message.from_user.last_name
@@ -53,36 +58,40 @@ def start(message):
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
 def show_menu(message):
-    food_order_manager = init_fomanager()
-    categories = food_order_manager.get_menu_categories()
-    show_menu_categories(bot,message,categories,user_data)
-    food_order_manager.db_manager.close()
+    make_menu_categories(bot,message,user_data)
+    # food_order_manager = init_fo_manager()
+    # categories = food_order_manager.get_menu_categories()
+    # show_menu_categories(bot,message,categories,user_data)
+    # food_order_manager.db_manager.close()
     print(user_data)
 
 # Показать блюда в категории
-@bot.message_handler(func=lambda message: message.text in [category[1] for category in init_fomanager().get_menu_categories()])
+@bot.message_handler(func=lambda message: message.text in [category[1] for category in init_fo_manager().get_menu_categories()])
 def show_category_items(message):
-    food_order_manager = init_fomanager()
-    category_name = message.text
-    category_id = next(category[0] for category in food_order_manager.get_menu_categories() if category[1] == category_name)
-    items = food_order_manager.get_menu_items(category_id=category_id)
-    show_menu_category_items(bot,message,items, user_data)
-    food_order_manager.db_manager.close()
+    make_menu_category_items(bot, message, user_data)
+    # food_order_manager = init_fo_manager()
+    # category_name = message.text
+    # category_id = next(category[0] for category in food_order_manager.get_menu_categories() if category[1] == category_name)
+    # items = food_order_manager.get_menu_items(category_id=category_id)
+    # show_menu_category_items(bot,message,items, user_data)
+    # food_order_manager.db_manager.close()
 
 # Обработчик выбора блюда
 @bot.message_handler(func=lambda message: message.text.endswith('руб.'))
 def select_item_quantity(message):
-    food_order_manager = init_fomanager()
-    user_id = message.from_user.id
-    item_name = message.text.split(' - ')[0]
-    item_id = food_order_manager.get_menu_item_id_by_name(item_name)[0]
-
-    # Сохраняем выбранное блюдо в user_data
-    user_data[user_id] = {'selected_item': item_name}
-    user_data[user_id] = {"step": "Item_quantity"}
-    user_data[user_id] = {"item_id": item_id}
-    image_path = os.path.join('img', 'zap_kab.jpg')
-    select_quantity(bot,message,item_name,image_path=image_path)
+    make_quantity_dialog(bot, message, user_data)
+    # food_order_manager = init_fo_manager()
+    # user_id = message.from_user.id
+    # item_name = message.text.split(' - ')[0]
+    # item_id = food_order_manager.get_menu_item_id_by_name(item_name)[0]
+    #
+    # # Сохраняем выбранное блюдо в user_data
+    # user_data[user_id] = {'selected_item': item_name}
+    # user_data[user_id] = {"step": "Item_quantity"}
+    # user_data[user_id] = {"item_id": item_id}
+    # image_path = os.path.join('img', 'zap_kab.jpg')
+    # print(user_data)
+    # select_quantity(bot,message,item_name,image_path=image_path)
 
     # Создаем кнопки для выбора количества
     # markup = types.ReplyKeyboardMarkup(row_width=5)
@@ -101,7 +110,7 @@ def add_item_to_order(message):
         bot.send_message(message.chat.id, "Ошибка: блюдо не выбрано.")
         return
 
-    food_order_manager = init_fomanager()
+    food_order_manager = init_fo_manager()
     item_name = user_data[user_id]['selected_item']
     item = next(item for item in food_order_manager.get_menu_items() if item[2] == item_name)
 
@@ -124,7 +133,7 @@ def add_item_to_order(message):
 
 # Показать меню с кнопкой "Оформить заказ"
 def show_menu_with_checkout(chat_id):
-    food_order_manager = init_fomanager()
+    food_order_manager = init_fo_manager()
     categories = food_order_manager.get_menu_categories()
     markup = types.ReplyKeyboardMarkup(row_width=2)
     for category in categories:
@@ -144,7 +153,7 @@ def checkout_order(message):
         bot.send_message(message.chat.id, "Ваш заказ пуст.")
         return
 
-    food_order_manager = init_fomanager()
+    food_order_manager = init_fo_manager()
     order_id = user_data[user_id]['order_id']
 
     # Получаем информацию о заказе
@@ -169,7 +178,7 @@ def checkout_order(message):
 # Показать заказы пользователя
 @bot.message_handler(func=lambda message: message.text == 'Мои заказы')
 def show_user_orders(message):
-    food_order_manager = init_fomanager()
+    food_order_manager = init_fo_manager()
     user_id = message.from_user.id
     print(f"{user_id} - Нажал 'Мои заказы'")
     orders = food_order_manager.get_user_orders(user_id)
