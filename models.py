@@ -50,6 +50,8 @@ class Dish(Base):
     __tablename__ = 'dishes'
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    description = Column(String)
+# добавить  dish.photo
     price = Column(Float)
     category_id = Column(Integer, ForeignKey('categories.id'))
     category = relationship('Category', back_populates='dishes')

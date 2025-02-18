@@ -20,6 +20,8 @@
 
         name
 
+        
+
         price
 
         category_id (FK -> categories.id)

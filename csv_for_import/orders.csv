@@ -1,0 +1,4 @@
+id,user_id,status,total_price,created_at
+1,1,completed,1200.0,2023-10-01 12:00:00
+2,2,in_progress,300.0,2023-10-02 14:30:00
+3,1,canceled,500.0,2023-10-03 16:45:00

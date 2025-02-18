@@ -218,6 +218,7 @@ def add_to_cart(call):
 # Хэндлер для кнопки "Корзинаю"
 @bot.message_handler(func=lambda message: message.text == "Корзина")
 
+
 def show_cart(message):
     user = session.query(User).filter_by(telegram_id=message.from_user.id).first()
     if not user:
@@ -228,103 +229,39 @@ def show_cart(message):
     if not orders:
         bot.send_message(message.chat.id, "Ваша корзина пуста.")
         return
-
+    print (orders.id)
     order_items = session.query(OrderItem).filter_by(order_id=orders.id).all()
+    total_price = 0
 
-    if not order_items:
-        bot.send_message(message.chat.id, "Ваша корзина пуста.")
-        return
-
+    markup = types.InlineKeyboardMarkup()
+    
     for item in order_items:
         dish = session.query(Dish).filter_by(id=item.dish_id).first()
         if dish:
-            # Отправка фото блюда
-            if hasattr(dish, 'photo') and dish.photo:
-                bot.send_photo(message.chat.id, dish.image, caption=f"{dish.name}\nЦена: {dish.price}\nКоличество: {item.quantity}")
-            else:
-                bot.send_message(message.chat.id, "Изображение не найдено.")
-                bot.send_message(message.chat.id, f"{dish.name}\nЦена: {dish.price}\nКоличество: {item.quantity}")
-
-            # Создание кнопок
-            markup = types.InlineKeyboardMarkup()
-            row1 = [
-                types.InlineKeyboardButton(f"{dish.name} - {dish.price}₽", callback_data=f"item_info_{item.id}"),
-            ]
-            row2 = [
-                types.InlineKeyboardButton(f"Стоимость: {dish.price * item.quantity}₽", callback_data="total_price"),
-                types.InlineKeyboardButton(f"Количество: {item.quantity}", callback_data="count_info"),
-            ]
-            row3 = [
-                types.InlineKeyboardButton("Количество +", callback_data=f"increase_{item.id}"),
-                types.InlineKeyboardButton("Количество -", callback_data=f"decrease_{item.id}"),
+            total_price += dish.price * item.quantity
+            
+            # Кнопки +, - и Удалить
+            row = [
+                types.InlineKeyboardButton("+", callback_data=f"increase_{item.id}"),
+                types.InlineKeyboardButton("-", callback_data=f"decrease_{item.id}"),
                 types.InlineKeyboardButton("Удалить", callback_data=f"remove_{item.id}"),
             ]
+            markup.add(*row)
 
-            markup.add(*row1)
-            markup.add(*row2)
-            markup.add(*row3)
+            # Фото блюда
+            if hasattr(dish, 'photo') and dish.photo:  # Предполагается, что у вас есть поле image в модели Dish
+                bot.send_photo(message.chat.id, dish.image, caption=f"{dish.name}\nЦена: {dish.price}\nКоличество: {item.quantity}")
+            else:
+                bot.send_message(message.chat.id, "Изображение не найдено.")  # Здесь заменено call на message
+                bot.send_message(message.chat.id, f"{dish.name}\nЦена: {dish.price}\nКоличество: {item.quantity}")
 
-            bot.send_message(message.chat.id, "Информация о блюде:", reply_markup=markup)
 
-# Обработка нажатий на кнопки
-@bot.callback_query_handler(func=lambda call: True)
-def handle_callback_query(call):
-    data = call.data.split('_')
-    
-    if data[0] == "increase":
-        item_id = int(data[1])
-        # Логика увеличения количества
-        # Например, обновление quantity в OrderItem
-    elif data[0] == "decrease":
-        item_id = int(data[1])
-        # Логика уменьшения количества
-        # Например, обновление quantity в OrderItem
-    elif data[0] == "remove":
-        item_id = int(data[1])
-        # Логика удаления OrderItem
-        session.query(OrderItem).filter_by(id=item_id).delete()
-        session.commit()
-        bot.send_message(call.message.chat.id, "Блюдо удалено. Обновляем корзину...")
-        show_cart(call.message)  # Обновляем корзину
-    elif data[0] == "total_price":
-        # Логика отображения общей стоимости
-        pass
-    elif data[0] == "count_info":
-        # Логика отображения информации о количестве
-        pass
-
-    bot.answer_callback_query(call.id)  # Подтверждение нажатия кнопки
-    # Создаем объект разметки клавиатуры
-    markup = types.InlineKeyboardMarkup()
-""" в работе
-    total_price = 1000
     # Кнопки "Стоимость заказа" и "Оформить заказ"
     markup.add(types.InlineKeyboardButton(f"Стоимость заказа: {total_price}", callback_data="total_price"))
     markup.add(types.InlineKeyboardButton("Оформить заказ", callback_data="checkout"))
 
-# Отображение общей стоимости
-elif data[0] == "total_price":
-    # Получаем все элементы в заказе
-    order_items = session.query(OrderItem).all()
-    total_price = sum(item.price * item.quantity for item in order_items)
-    
-    # Отправляем сообщение с общей стоимостью
-    bot.send_message(call.message.chat.id, f"Общая стоимость: {total_price} руб.")
-
-# Информация о количестве элементов
-elif data[0] == "count_info":
-    # Получаем все элементы в заказе
-    order_items = session.query(OrderItem).all()
-    total_count = sum(item.quantity for item in order_items)
-
-
-
-    # Отправляем сообщение с общей информацией о количестве
-    bot.send_message(call.message.chat.id, f"Количество элементов в корзине: {total_count}")
-
-
     bot.send_message(message.chat.id, "Ваши блюда в корзине:", reply_markup=markup)
-"""
+
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
     user = session.query(User).filter_by(telegram_id=call.from_user.id).first()
