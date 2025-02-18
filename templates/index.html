@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lido</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .menu-item {
+            background: #fff;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 400px;
+        }
+        .menu-item span {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .menu-item button {
+            padding: 8px 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .menu-item button:hover {
+            background-color: #218838;
+        }
+        #cart {
+            margin-top: 20px;
+            padding: 15px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #cart h2 {
+            margin-bottom: 10px;
+        }
+        #cart-items {
+            list-style: none;
+            padding: 0;
+        }
+        #cart-items li {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        #checkout {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+        }
+        #checkout:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Меню</h1>
+    <div id="menu">
+        {% for item in menu_items %}
+            <div class="menu-item">
+                <span>{{ item.title }} - {{ item.price }}€</span>
+                <button onclick="addToCart('{{ item.title }}', {{ item.price }})">В корзину</button>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div id="cart">
+        <h2>Корзина</h2>
+        <ul id="cart-items"></ul>
+        <p><strong>Итого:</strong> <span id="total">0</span>€</p>
+        <button id="checkout">Оформить заказ</button>
+    </div>
+
+    <script>
+        const telegram = window.Telegram.WebApp;
+        telegram.expand();
+
+        let cart = [];
+
+        function addToCart(title, price) {
+            cart.push({ title, price });
+            updateCart();
+        }
+
+        function updateCart() {
+            const cartList = document.getElementById("cart-items");
+            cartList.innerHTML = "";
+            let total = 0;
+
+            cart.forEach(item => {
+                const li = document.createElement("li");
+                li.textContent = `${item.title} - ${item.price}€`;
+                cartList.appendChild(li);
+                total += item.price;
+            });
+
+            document.getElementById("total").textContent = total.toFixed(2);
+        }
+
+        document.getElementById("checkout").addEventListener("click", () => {
+            if (cart.length === 0) {
+                alert("Корзина пуста!");
+                return;
+            }
+
+            const orderSummary = cart.map(item => `${item.title} - ${item.price}€`).join("\n");
+            telegram.sendData(JSON.stringify(cart));
+            telegram.close();
+        });
+    </script>
+</body>
+</html>
