@@ -2,7 +2,13 @@ from math import ceil
 import telebot
 from telebot import types
 
-def create_tile_kbd(keyboard, row_width=1, nums=1, msg=["", "",], splitter="", values=None, back ="X"):
+def create_tile_kbd(keyboard,
+                    row_width=1,
+                    nums=1,
+                    msg=["", "",],
+                    splitter="",
+                    values=None,
+                    back ="❌"):
 
     """
     Универсальная функция для создания плиточной клавиатуры.
@@ -52,7 +58,7 @@ def create_tile_kbd(keyboard, row_width=1, nums=1, msg=["", "",], splitter="", v
         for j in range(columns):
             val = (i) * row_width + j
             if back and val == 0:
-                text = "X"
+                text = back
             elif type(values) == list:
                 text = values[val]
             else:
@@ -97,4 +103,12 @@ def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""]):
     """
     keyboard = types.InlineKeyboardMarkup( row_width=row_width)
     create_tile_kbd(keyboard, row_width=row_width, nums=nums, msg=msg, values=values)
+    return keyboard
+
+def create_keyboard_variable_rows(data):
+    keyboard = types.InlineKeyboardMarkup(row_width=4)
+    for index, row in enumerate(data):
+        buttons = [types.InlineKeyboardButton(text=col, callback_data="noop") for col in row]
+        buttons.append(types.InlineKeyboardButton(text="❌", callback_data=f"delete_{index}"))
+        keyboard.add(*buttons)
     return keyboard

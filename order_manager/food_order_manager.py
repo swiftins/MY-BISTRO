@@ -90,6 +90,12 @@ class FoodOrderManager:
         query = "SELECT * FROM orders WHERE user_id = ?"
         return self.db_manager.fetch_data(query, (user_id,))
 
+    def get_user_orders_by_status(self, user_id, status="pending"):
+        """Получить все заказы пользователя."""
+        query = "SELECT * FROM orders WHERE user_id = ? AND status = ?"
+        return self.db_manager.fetch_data(query, (user_id,status))
+
+
     def get_order_items(self, order_id):
         """Получить все блюда в заказе."""
         query = """
@@ -108,8 +114,25 @@ class FoodOrderManager:
 
     def delete_order(self, order_id):
         """Удалить заказ."""
-        query = "DELETE FROM orders WHERE id = ?"
+        query = "DELETE FROM orders WHERE id = ? AND status = 'pending'"
         return self.db_manager.delete_data(query, (order_id,))
+
+    def update_all_orders(self):
+        query="""
+        UPDATE orders 
+        SET total_price = (
+            SELECT SUM(oi.quantity * mi.price) 
+            FROM order_items AS oi
+            INNER JOIN menu_items AS mi ON oi.menu_item_id = mi.id
+            WHERE oi.order_id = orders.id
+            GROUP BY oi.order_id
+        )
+        WHERE EXISTS (
+            SELECT 1
+            FROM order_items AS oi
+            WHERE oi.order_id = orders.id
+        );"""
+        return self.db_manager.update_data(query)
 
 def init_fo_manager(db_type='sqlite'):
     db_connector = DBConnector(db_type)

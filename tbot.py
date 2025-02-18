@@ -181,14 +181,14 @@ def checkout_order(message):
     show_main_menu(message.chat.id)
     food_order_manager.db_manager.close()
 
-@bot.message_handler(func=lambda message: message.text == 'X' or message.text == 'Назад' or message.text == '0')
+@bot.message_handler(func=lambda message: message.text == 'X' or message.text == 'Назад' or message.text == '0' or message.text == '❌')
 def go_back(message):
     if len(user_data)==0:
         trigger_start(message)
         return False
     print(user_data)
     usr_data = user_data[message.from_user.id]
-    previous_step = menu_tree_previous[usr_data["step"]][0]
+    #previous_step = menu_tree_previous[usr_data["step"]][0]
     previous_menu = menu_tree_previous[usr_data["step"]][1]
     previous_menu(bot, message, user_data)
 
@@ -235,23 +235,41 @@ def handle_callback_query(call):
     quantity = int(call.data)
     print(user_data)
 
+    if len(user_data) == 0:
+        bot.send_message(call.id, "Сессия была прервана. Используйте нижнее меню")
+        trigger_start(call.message.chat.id)
+
+    if user_data[user_id]["step"] != "Item_quantity":
+        bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
+        return
+
     if user_id not in user_data or 'selected_item' not in user_data[user_id]:
-        bot.send_message(call.chat.id, "Ошибка: блюдо не выбрано.")
+        bot.send_message(call.message.chat.id, "Ошибка: блюдо не выбрано.")
         return
 
     food_order_manager = init_fo_manager()
     item_name = user_data[user_id]['selected_item']
-    item = next(item for item in food_order_manager.get_menu_items() if item[2] == item_name)
+    item = food_order_manager.get_menu_item_id_by_name(item_name)[0]
+
+    #item = next(item for item in food_order_manager.get_menu_items() if item[2] == item_name)
+
 
     # Создание заказа, если его еще нет
     if 'order_id' not in user_data[user_id]:
-        order_id = str(uuid.uuid4())
-        user_data[user_id]['order_id'] = order_id
-        food_order_manager.create_order(user_id, total_price=0)
+        order_pending = food_order_manager.get_user_orders_by_status(user_id)[-1]
+        if len(order_pending) > 0:
+            user_data[user_id]['order_id'] = order_pending[0]
+            bot.send_message(call.message.chat.id, "Найден незавершенный заказ. Продолжаю заполнение")
+        else:
+            order_id = str(uuid.uuid4())
+            user_data[user_id]['order_id'] = order_id
+            food_order_manager.create_order(user_id, total_price=0)
 
     # Добавление блюда в заказ
     food_order_manager.add_item_to_order(user_data[user_id]['order_id'], item[0], quantity)
-    bot.send_message(call.chat.id, f"{quantity} порций '{item_name}' добавлено в заказ!")
+    bot.send_message(call.message.chat.id, f"{quantity} порций '{item_name}' добавлено в заказ!")
+    food_order_manager.update_all_orders()
+
 
 
 # Запуск бота
