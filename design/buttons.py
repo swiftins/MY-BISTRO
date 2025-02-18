@@ -106,9 +106,10 @@ def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""]):
     return keyboard
 
 def create_keyboard_variable_rows(data):
-    keyboard = types.InlineKeyboardMarkup(row_width=4)
+    keyboard = types.InlineKeyboardMarkup(row_width=len(data[0])+1)
     for index, row in enumerate(data):
-        buttons = [types.InlineKeyboardButton(text=col, callback_data="noop") for col in row]
-        buttons.append(types.InlineKeyboardButton(text="❌", callback_data=f"delete_{index}"))
+        row_showing = [row[1],f"{row[2]} руб.*{row[3]}"]
+        buttons = [types.InlineKeyboardButton(text=col, callback_data="noop") for col in row_showing]
+        buttons.append(types.InlineKeyboardButton(text="❌", callback_data=f"delete_{row[0]}"))
         keyboard.add(*buttons)
     return keyboard

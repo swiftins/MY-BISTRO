@@ -99,7 +99,7 @@ class FoodOrderManager:
     def get_order_items(self, order_id):
         """Получить все блюда в заказе."""
         query = """
-            SELECT oi.idmi.name, mi.price, oi.quantity
+            SELECT oi.id,mi.name, mi.price, oi.quantity
             FROM order_items oi
             JOIN menu_items mi ON oi.menu_item_id = mi.id
             WHERE oi.order_id = ?
