@@ -11,7 +11,7 @@ from design import create_reply_kbd, create_inline_kbd
 # Показать главное меню
 def show_main_menu(bot,message,user_data):
 
-    main_menu = ["Меню","Мои заказы", "Отзывы", "Оформить заказ", "Выйти"]
+    main_menu = ["Меню","Мои заказы", "Отзывы", "Оформить заказ", "Почистить чат","Выйти"]
     keyboard = create_reply_kbd(row_width=2, values=main_menu, back = None)
     old_message = bot.send_message(message.chat.id, "Выберите действие:", reply_markup=keyboard)
     print(user_data)
@@ -91,3 +91,7 @@ def make_quantity_dialog(bot,message,user_data):
     image_path = os.path.join('img', folder, file)
     select_quantity(bot, message, item_caption, image_path=image_path,  msg=["","шт."])
     bot.delete_message(message.chat.id, message.message_id)
+
+def show_order(bot,message,user_data):
+    food_order_manager = init_fo_manager()
+

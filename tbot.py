@@ -11,7 +11,8 @@ from design import show_main_menu, show_menu_categories, show_menu_category_item
 from design import (make_menu_categories,
                     make_menu_category_items,
                     make_quantity_dialog,
-                    menu_tree_previous)
+                    menu_tree_previous,
+                    create_keyboard_variable_rows)
 
 # Инициализация бота
 TOKEN = '7265481895:AAEiGtEWswZa-Jz0CMf63j-zn9-wWcaOzME'
@@ -60,6 +61,7 @@ def trigger_start(chat_id):
 # Команда старта
 @bot.message_handler(commands=['start'])
 def start(message):
+    bot.delete_message(message.chat.id, message.message_id)
     food_order_manager = init_fo_manager()
     user_id = message.from_user.id
     user_data[user_id]={}
@@ -91,6 +93,7 @@ def start(message):
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
 def show_menu(message):
+    bot.delete_message(message.chat.id, message.message_id)
     if message.from_user.id not in user_data:
         trigger_start(message)
         return
@@ -102,6 +105,7 @@ def show_menu(message):
 # Показать блюда в категории
 @bot.message_handler(func=lambda message: message.text in [category[1] for category in init_fo_manager().get_menu_categories()])
 def show_category_items(message):
+    bot.delete_message(message.chat.id, message.message_id)
     if len(user_data)==0:
         trigger_start(message)
         return False
@@ -171,6 +175,8 @@ def show_menu_with_checkout(chat_id):
 # Обработчик оформления заказа
 @bot.message_handler(func=lambda message: message.text == 'Оформить заказ')
 def checkout_order(message):
+    chat_id = message.chat.id
+    bot.delete_message(chat_id, message.message_id)
     user_id = message.from_user.id
     print(f"{user_id} - Нажал 'Оформить заказ'")
     food_order_manager = init_fo_manager()
@@ -179,9 +185,9 @@ def checkout_order(message):
         order_pending = food_order_manager.get_user_orders_by_status(user_id)[-1]
         if len(order_pending) > 0:
             user_data[user_id]['order_id'] = order_pending[0]
-            bot.send_message(message.chat.id, "Найден заказ.")
+            msg = bot.send_message(chat_id, "Найден заказ.")
         else:
-            bot.send_message(message.chat.id, "Ваш заказ пуст.")
+            bot.send_message(chat_id, "Ваш заказ пуст.")
             return
 
 
@@ -199,14 +205,30 @@ def checkout_order(message):
 
     bot.send_message(message.chat.id, order_message)
 
-
+    kbd = create_keyboard_variable_rows(order_items)
+    bot.send_message(chat_id, f"<b>Ваш заказ</b> :  {total_price} руб.", reply_markup=kbd, parse_mode='HTML')
     # Очищаем заказ
-    del user_data[user_id]['order_id']
+    #del user_data[user_id]['order_id']
 
     # Возвращаем пользователя в главное меню
     show_main_menu(bot,message,user_data)
     food_order_manager.db_manager.close()
-    bot.delete_message(message.chat.id, message.message_id)
+    bot.delete_message(message.chat.id, msg.message_id)
+
+
+@bot.message_handler(func=lambda message: message.text == "Почистить чат")
+def clear_chat(message):
+    chat_id = message.chat.id
+
+    # Получаем последние 10 сообщений в чате
+    message_ids = [message.message_id - i for i in range(100)]
+
+    # Пытаемся удалить каждое сообщение
+    for msg_id in message_ids:
+        try:
+            bot.delete_message(chat_id, msg_id)
+        except Exception as e:
+            print(f"Не удалось удалить сообщение с ID {msg_id}: {e}")
 
 @bot.message_handler(func=lambda message: message.text == 'X' or message.text == 'Назад' or message.text == '0' or message.text == '❌')
 def go_back(message):
