@@ -181,13 +181,14 @@ def checkout_order(message):
     print(f"{user_id} - Нажал 'Оформить заказ'")
     food_order_manager = init_fo_manager()
     user_data[user_id] = user_data.get(user_id, {})
+    msg = None
     if 'order_id' not in user_data[user_id]:
         order_pending = food_order_manager.get_user_orders_by_status(user_id)[-1]
         if len(order_pending) > 0:
             user_data[user_id]['order_id'] = order_pending[0]
             msg = bot.send_message(chat_id, "Найден заказ.")
         else:
-            bot.send_message(chat_id, "Ваш заказ пуст.")
+            msg.bot.send_message(chat_id, "Ваш заказ пуст.")
             return
 
 
@@ -198,12 +199,12 @@ def checkout_order(message):
     total_price = sum(item[2] * item[3] for item in order_items)  # price * quantity
 
     # Формируем сообщение с заказом
-    order_message = "Ваш заказ:\n"
-    for item in order_items:
-        order_message += f"{item[0]}:{item[1]} - {item[3]} шт. - {item[2] * item[3]} руб.\n"
-    order_message += f"Итого: {total_price} руб."
-
-    bot.send_message(message.chat.id, order_message)
+    # order_message = "Ваш заказ:\n"
+    # for item in order_items:
+    #     order_message += f"{item[0]}:{item[1]} - {item[3]} шт. - {item[2] * item[3]} руб.\n"
+    # order_message += f"Итого: {total_price} руб."
+    #
+    # bot.send_message(message.chat.id, order_message)
 
     kbd = create_keyboard_variable_rows(order_items)
     bot.send_message(chat_id, f"<b>Ваш заказ</b> :  {total_price} руб.", reply_markup=kbd, parse_mode='HTML')
@@ -213,7 +214,8 @@ def checkout_order(message):
     # Возвращаем пользователя в главное меню
     show_main_menu(bot,message,user_data)
     food_order_manager.db_manager.close()
-    bot.delete_message(message.chat.id, msg.message_id)
+    if msg:
+        bot.delete_message(message.chat.id, msg.message_id)
 
 
 @bot.message_handler(func=lambda message: message.text == "Почистить чат")
