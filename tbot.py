@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 import telebot
 from telebot import types
+
 from order_manager import FoodOrderManager, init_fo_manager
 from db_module import DBConnector, DBManager
 import uuid
@@ -20,6 +21,7 @@ bot = telebot.TeleBot(TOKEN)
 # Глобальная переменная для максимального количества порций
 number_of_seats = 8  # Максимальное количество порций
 
+
 # Инициализация менеджера заказов
 # def init_fo_manager(db_type='sqlite'):
 #     db_connector = DBConnector(db_type)
@@ -29,6 +31,16 @@ number_of_seats = 8  # Максимальное количество порци�
 # Состояния для обработки заказов
 sessions = {}
 user_data = {}
+
+def delete_old_message(message):
+    user_id = message.from_user.id
+    if (user_id in user_data
+        and "old_message" in user_data[user_id]
+        and user_data[user_id]["old_message"] is not None):
+        bot.delete_message(message.chat.id, user_data[user_id]["old_message"])
+        user_data[message.from_user.id]["old_message"] = None
+
+
 # Инициирование события /start программно
 def trigger_start(chat_id):
     # Создаем фейковое сообщение
@@ -51,6 +63,9 @@ def start(message):
     food_order_manager = init_fo_manager()
     user_id = message.from_user.id
     user_data[user_id]={}
+    user_data[user_id]["old_message"] = message
+
+
     username = message.from_user.username
     first_name = message.from_user.first_name
     last_name = message.from_user.last_name
@@ -68,18 +83,20 @@ def start(message):
         bot.send_message(message.chat.id, f"👏С возвращением, {full_name} !🤗")
 
     # Отправка главного меню
-    show_main_menu(bot,message,user_data)
+    old_message = show_main_menu(bot,message,user_data)
     food_order_manager.db_manager.close()
     print(user_data)
+
 
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
 def show_menu(message):
-    make_menu_categories(bot,message,user_data)
-    # food_order_manager = init_fo_manager()
-    # categories = food_order_manager.get_menu_categories()
-    # show_menu_categories(bot,message,categories,user_data)
-    # food_order_manager.db_manager.close()
+    if message.from_user.id not in user_data:
+        trigger_start(message)
+        return
+    #delete_old_message(message)
+    user_data[message.from_user.id]["old_message"] = make_menu_categories(bot,message,user_data)
+    bot.delete_message(message.chat.id, message.message_id)
     print(user_data)
 
 # Показать блюда в категории
@@ -89,6 +106,7 @@ def show_category_items(message):
         trigger_start(message)
         return False
     make_menu_category_items(bot, message, user_data)
+    bot.delete_message(message.chat.id, message.message_id)
     # food_order_manager = init_fo_manager()
     # category_name = message.text
     # category_id = next(category[0] for category in food_order_manager.get_menu_categories() if category[1] == category_name)
@@ -149,37 +167,46 @@ def show_menu_with_checkout(chat_id):
     bot.send_message(chat_id, "Выберите категорию или оформите заказ:", reply_markup=markup)
     food_order_manager.db_manager.close()
 
+
 # Обработчик оформления заказа
 @bot.message_handler(func=lambda message: message.text == 'Оформить заказ')
 def checkout_order(message):
     user_id = message.from_user.id
     print(f"{user_id} - Нажал 'Оформить заказ'")
-
-    if 'order_id' not in user_data.get(user_id, {}):
-        bot.send_message(message.chat.id, "Ваш заказ пуст.")
-        return
-
     food_order_manager = init_fo_manager()
+    user_data[user_id] = user_data.get(user_id, {})
+    if 'order_id' not in user_data[user_id]:
+        order_pending = food_order_manager.get_user_orders_by_status(user_id)[-1]
+        if len(order_pending) > 0:
+            user_data[user_id]['order_id'] = order_pending[0]
+            bot.send_message(message.chat.id, "Найден заказ.")
+        else:
+            bot.send_message(message.chat.id, "Ваш заказ пуст.")
+            return
+
+
     order_id = user_data[user_id]['order_id']
 
     # Получаем информацию о заказе
     order_items = food_order_manager.get_order_items(order_id)
-    total_price = sum(item[1] * item[2] for item in order_items)  # price * quantity
+    total_price = sum(item[2] * item[3] for item in order_items)  # price * quantity
 
     # Формируем сообщение с заказом
     order_message = "Ваш заказ:\n"
     for item in order_items:
-        order_message += f"{item[0]} - {item[2]} шт. - {item[1] * item[2]} руб.\n"
+        order_message += f"{item[0]}:{item[1]} - {item[3]} шт. - {item[2] * item[3]} руб.\n"
     order_message += f"Итого: {total_price} руб."
 
     bot.send_message(message.chat.id, order_message)
+
 
     # Очищаем заказ
     del user_data[user_id]['order_id']
 
     # Возвращаем пользователя в главное меню
-    show_main_menu(message.chat.id)
+    show_main_menu(bot,message,user_data)
     food_order_manager.db_manager.close()
+    bot.delete_message(message.chat.id, message.message_id)
 
 @bot.message_handler(func=lambda message: message.text == 'X' or message.text == 'Назад' or message.text == '0' or message.text == '❌')
 def go_back(message):
@@ -191,6 +218,7 @@ def go_back(message):
     #previous_step = menu_tree_previous[usr_data["step"]][0]
     previous_menu = menu_tree_previous[usr_data["step"]][1]
     previous_menu(bot, message, user_data)
+    bot.delete_message(message.chat.id, message.message_id)
 
 # Показать заказы пользователя
 @bot.message_handler(func=lambda message: message.text == 'Мои заказы')
@@ -198,9 +226,11 @@ def show_user_orders(message):
     food_order_manager = init_fo_manager()
     user_id = message.from_user.id
     print(f"{user_id} - Нажал 'Мои заказы'")
+    bot.delete_message(message.chat.id, message.message_id)
     orders = food_order_manager.get_user_orders(user_id)
     if orders:
         for order in orders:
+
             bot.send_message(message.chat.id, f"Заказ #{order[0]}: {order[2]}, Сумма: {order[3]} руб.")
     else:
         bot.send_message(message.chat.id, "У вас пока нет заказов.")

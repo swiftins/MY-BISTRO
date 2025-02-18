@@ -7,25 +7,27 @@ import uuid
 from order_manager import FoodOrderManager, init_fo_manager
 from design import create_reply_kbd, create_inline_kbd
 
+
 # Показать главное меню
 def show_main_menu(bot,message,user_data):
 
-    main_menu = ["Меню","Мои заказы", "Отзывы", "Выйти"]
+    main_menu = ["Меню","Мои заказы", "Отзывы", "Оформить заказ", "Выйти"]
     keyboard = create_reply_kbd(row_width=2, values=main_menu, back = None)
-    bot.send_message(message.chat.id, "Выберите действие:", reply_markup=keyboard)
+    old_message = bot.send_message(message.chat.id, "Выберите действие:", reply_markup=keyboard)
     print(user_data)
     user_data[message.from_user.id].update({"step" : "Main_menu"})
-    pass
+    return old_message
 
 def show_menu_categories(bot,message,categories,user_data):
     category = [row[1] for row in categories]
+
     print(message.chat.id)
     keyboard = create_reply_kbd(row_width=3, values=category, back="Назад")
-    bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=keyboard)
+    old_message = bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=keyboard)
     if user_data == {}:
         user_data[message.from_user.id] = {}
     user_data[message.from_user.id]["step"]= "Category_menu"
-    pass
+    return old_message
 
 def show_menu_category_items(bot,message,items,user_data):
     item = [f"{row[2]} - {row[4]} руб." for row in items]
@@ -54,8 +56,9 @@ def select_quantity(bot,message,item_name,image_path=None,number_of_seats = 8,ms
 def make_menu_categories(bot,message,user_data):
     food_order_manager = init_fo_manager()
     categories = food_order_manager.get_menu_categories()
-    show_menu_categories(bot,message,categories,user_data)
+    old_message = show_menu_categories(bot,message,categories,user_data)
     food_order_manager.db_manager.close()
+    return old_message
 
 def make_menu_category_items(bot,message,user_data):
     food_order_manager = init_fo_manager()
@@ -68,6 +71,7 @@ def make_menu_category_items(bot,message,user_data):
     items = food_order_manager.get_menu_items(category_id=category_id)
     show_menu_category_items(bot, message, items, user_data)
     food_order_manager.db_manager.close()
+    bot.delete_message(message.chat.id, message.message_id)
 
 def make_quantity_dialog(bot,message,user_data):
     food_order_manager = init_fo_manager()
@@ -86,3 +90,4 @@ def make_quantity_dialog(bot,message,user_data):
     print(user_data)
     image_path = os.path.join('img', folder, file)
     select_quantity(bot, message, item_caption, image_path=image_path,  msg=["","шт."])
+    bot.delete_message(message.chat.id, message.message_id)
