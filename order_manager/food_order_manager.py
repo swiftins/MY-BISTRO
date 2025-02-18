@@ -125,19 +125,14 @@ class FoodOrderManager:
 
     def update_all_orders(self):
         query="""
-        UPDATE orders 
-        SET total_price = (
-            SELECT SUM(oi.quantity * mi.price) 
+            UPDATE orders
+            SET total_price = COALESCE(
+            (SELECT SUM(oi.quantity * mi.price)
             FROM order_items AS oi
             INNER JOIN menu_items AS mi ON oi.menu_item_id = mi.id
             WHERE oi.order_id = orders.id
             GROUP BY oi.order_id
-        )
-        WHERE EXISTS (
-            SELECT 1
-            FROM order_items AS oi
-            WHERE oi.order_id = orders.id
-        );"""
+            ), 0);"""
         return self.db_manager.update_data(query)
 
 def init_fo_manager(db_type='sqlite'):

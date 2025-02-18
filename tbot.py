@@ -246,10 +246,10 @@ def show_user_orders(message):
     user_id = message.from_user.id
     print(f"{user_id} - Нажал 'Мои заказы'")
     bot.delete_message(message.chat.id, message.message_id)
+    food_order_manager.update_all_orders()
     orders = food_order_manager.get_user_orders(user_id)
     if orders:
         for order in orders:
-
             bot.send_message(message.chat.id, f"Заказ #{order[0]}: {order[2]}, Сумма: {order[3]} руб.")
     else:
         bot.send_message(message.chat.id, "У вас пока нет заказов.")
@@ -302,6 +302,7 @@ def handle_delete_callback(call):
     # Выполняем удаление
     food_order_manager = init_fo_manager()
     food_order_manager.delete_order_item(item_to_delete)
+    food_order_manager.update_all_orders()
     order_items = food_order_manager.get_order_items(user_data[call.from_user.id]["order_id"])
     if len(order_items) == 0:
         bot.delete_message(call.message.chat.id, call.message.message_id)
