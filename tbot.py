@@ -250,6 +250,7 @@ def handle_callback_query(call):
     food_order_manager = init_fo_manager()
     item_name = user_data[user_id]['selected_item']
     item = food_order_manager.get_menu_item_id_by_name(item_name)[0]
+    bot.delete_message(call.message.chat.id, call.message.message_id)
 
     #item = next(item for item in food_order_manager.get_menu_items() if item[2] == item_name)
 

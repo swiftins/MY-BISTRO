@@ -61,7 +61,7 @@ def make_menu_category_items(bot,message,user_data):
     food_order_manager = init_fo_manager()
     category_name = message.text
     if category_name == "Назад":
-        show_main_menu(bot, message, user_data)
+        make_menu_categories(bot, message, user_data)
         return
     category_id = next(
         category[0] for category in food_order_manager.get_menu_categories() if category[1] == category_name)
