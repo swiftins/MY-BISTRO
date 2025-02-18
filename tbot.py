@@ -51,9 +51,10 @@ def trigger_start(chat_id):
             self.text = '/start'
             self.from_user = types.User(id= message.chat.id,
                                         is_bot=False,
-                                        first_name=message.from_user.first_name,
-                                        last_name=message.from_user.last_name,
-                                        username=message.from_user.username)
+                                        first_name=message.chat.first_name,
+                                        last_name=message.chat.last_name,
+                                        username=message.chat.username
+                                        )
 
     # Вызываем обработчик как будто это сообщение от пользователя
     start(FakeMessage(chat_id))
@@ -61,26 +62,27 @@ def trigger_start(chat_id):
 # Команда старта
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.delete_message(message.chat.id, message.message_id)
+    if hasattr(message, 'message_id'):
+        bot.delete_message(message.chat.id, message.message_id)
     food_order_manager = init_fo_manager()
     user_id = message.from_user.id
     user_data[user_id]={}
+    order_pending = food_order_manager.get_user_orders_by_status(user_id)[-1]
+    if len(order_pending) > 0:
+        user_data[user_id]['order_id'] = order_pending[0]
     user_data[user_id]["old_message"] = message
 
 
     username = message.from_user.username
     first_name = message.from_user.first_name
     last_name = message.from_user.last_name
-    full_name = first_name + " " + last_name
+    full_name = f"{first_name or ''} {last_name or ''}"
     if full_name == " ":
-        full_name = "Инкогнито 😎"
-
+        full_name = username
     # Проверка, существует ли пользователь
     if not food_order_manager.check_user_exists(telegram_id=user_id):
         if food_order_manager.create_user(user_id, username, first_name, last_name):
             bot.send_message(message.chat.id, f"😀 {full_name}, Вы успешно зарегистрированы!👍")
-        else:
-            raise
     else:
         bot.send_message(message.chat.id, f"👏С возвращением, {full_name} !🤗")
 
@@ -196,21 +198,14 @@ def checkout_order(message):
 
     # Получаем информацию о заказе
     order_items = food_order_manager.get_order_items(order_id)
+    if len(order_items) == 0:
+        bot.send_message(chat_id, "Ваш заказ пуст.")
+        return
     total_price = sum(item[2] * item[3] for item in order_items)  # price * quantity
-
-    # Формируем сообщение с заказом
-    # order_message = "Ваш заказ:\n"
-    # for item in order_items:
-    #     order_message += f"{item[0]}:{item[1]} - {item[3]} шт. - {item[2] * item[3]} руб.\n"
-    # order_message += f"Итого: {total_price} руб."
-    #
-    # bot.send_message(message.chat.id, order_message)
-
+    title = f"<b>Ваш заказ</b> :  {total_price} руб."
+    # Формируем инлайн-клавиатуру с заказом
     kbd = create_keyboard_variable_rows(order_items)
-    bot.send_message(chat_id, f"<b>Ваш заказ</b> :  {total_price} руб.", reply_markup=kbd, parse_mode='HTML')
-    # Очищаем заказ
-    #del user_data[user_id]['order_id']
-
+    user_data[user_id]["order_form"] = bot.send_message(chat_id, title, reply_markup=kbd, parse_mode='HTML')
     # Возвращаем пользователя в главное меню
     show_main_menu(bot,message,user_data)
     food_order_manager.db_manager.close()
@@ -282,6 +277,47 @@ def handle_csv(message):
 def handle_unprocessed_messages(message):
     print(f"Необработанное сообщение от {message.from_user.username or message.from_user.first_name}: {message.text}")
 
+# Оформление заказа
+@bot.callback_query_handler(func=lambda call: call.data==('Оформить заказ'))
+def handle_close_order_callback(call):
+    user_id = call.from_user.id
+    if user_id in user_data and "order_id" in user_data[user_id]:
+        del user_data[user_id]["order_id"]
+    bot.send_message(call.id, "Сколько вы хотите?")
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+
+# Удаление блюда из заказа
+@bot.callback_query_handler(func=lambda call: call.data.startswith('delete_'))
+def handle_delete_callback(call):
+    # Извлекаем данные после 'delete_'
+    user_id = call.from_user.id
+    if user_id in user_data and "order_form" in user_data[user_id] :
+        item_to_delete = call.data[len('delete_'):]
+    else:
+        bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
+        trigger_start(call.message)
+        return
+
+
+    # Выполняем удаление
+    food_order_manager = init_fo_manager()
+    food_order_manager.delete_order_item(item_to_delete)
+    order_items = food_order_manager.get_order_items(user_data[call.from_user.id]["order_id"])
+    if len(order_items) == 0:
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        bot.send_message(call.message.chat.id, "Ваш заказ пуст.")
+        return
+    total_price = sum(item[2] * item[3] for item in order_items)  # price * quantity
+    title = f"<b>Ваш заказ</b> :  {total_price} руб."
+    bot.edit_message_text(chat_id=call.message.chat.id,
+                                  message_id=call.message.message_id,
+                                  text=title,
+                                  reply_markup=create_keyboard_variable_rows(order_items),
+                                  parse_mode='HTML')
+    bot.send_message(call.message.chat.id, "Пункт заказа удален.")
+
+
+# Добавление блюда в заказ
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
     print(f"Callback query from {call.from_user.username or call.from_user.first_name}: {call.data}")
@@ -291,7 +327,7 @@ def handle_callback_query(call):
 
     if len(user_data) == 0:
         bot.send_message(call.id, "Сессия была прервана. Используйте нижнее меню")
-        trigger_start(call.message.chat.id)
+        trigger_start(call.message)
 
     if user_data[user_id]["step"] != "Item_quantity":
         bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")

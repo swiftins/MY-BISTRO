@@ -117,6 +117,12 @@ class FoodOrderManager:
         query = "DELETE FROM orders WHERE id = ? AND status = 'pending'"
         return self.db_manager.delete_data(query, (order_id,))
 
+    def delete_order_item(self, order_id):
+        """Удалить из заказа."""
+        query = "DELETE FROM order_items WHERE id = ?"
+        return self.db_manager.delete_data(query, (order_id,))
+
+
     def update_all_orders(self):
         query="""
         UPDATE orders 
