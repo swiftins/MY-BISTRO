@@ -10,7 +10,8 @@ from .menu import (show_main_menu,
                    make_menu_categories,
                    make_menu_category_items,
                    make_quantity_dialog,
-                   show_order
+                   show_order,
+                   show_help
                    )
 menu_tree_previous = {
     "Category_menu": ["Main_menu",show_main_menu],

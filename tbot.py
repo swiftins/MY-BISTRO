@@ -10,6 +10,7 @@ from db_module import DBConnector, DBManager
 import uuid
 import os
 import csv
+
 from design import (show_main_menu,
                     show_menu_categories,
                     show_menu_category_items,
@@ -44,9 +45,9 @@ user_data = {}
 
 def delete_old_message(message):
     user_id = message.from_user.id
-    if (user_id in user_data
-        and "old_message" in user_data[user_id]
-        and user_data[user_id]["old_message"] is not None):
+    user_data[user_id] = user_data.get(user_id, {})
+    user_data[user_id]["old_message"] = user_data[user_id].get("old_message", None)
+    if user_data[user_id]["old_message"] is not None:
         bot.delete_message(message.chat.id, user_data[user_id]["old_message"])
         user_data[message.from_user.id]["old_message"] = None
 
@@ -75,7 +76,7 @@ def start(message):
         bot.delete_message(message.chat.id, message.message_id)
     food_order_manager = init_fo_manager()
     user_id = message.from_user.id
-    user_data[user_id]={}
+    user_data[user_id] = user_data.get(user_id, {})
     order_pending = food_order_manager.get_user_orders_by_status(user_id)
     if order_pending and len(order_pending) > 0:
         order_pending = order_pending[-1]
@@ -111,11 +112,13 @@ def help(message):
 @bot.message_handler(func=lambda message: message.text == 'Меню')
 def show_menu(message):
     #bot.delete_message(message.chat.id, message.message_id)
+    user_id = message.from_user.id
+    user_data[user_id] = user_data.get(user_id, {})
     if message.from_user.id not in user_data:
         trigger_start(message)
         return
     #delete_old_message(message)
-    user_data[message.from_user.id]["old_message"] = make_menu_categories(bot,message,user_data)
+    user_data[user_id]["old_message"] = make_menu_categories(bot,message,user_data)
 
     bot.delete_message(message.chat.id, message.message_id)
     print(user_data)
@@ -124,7 +127,9 @@ def show_menu(message):
 @bot.message_handler(func=lambda message: message.text in [category[1] for category in init_fo_manager().get_menu_categories()])
 def show_category_items(message):
     #bot.delete_message(message.chat.id, message.message_id)
-    if len(user_data)==0:
+    user_id = message.from_user.id
+    user_data[user_id] = user_data.get(user_id, {})
+    if len(user_data[user_id])==0:
         trigger_start(message)
         return False
     make_menu_category_items(bot, message, user_data)
@@ -134,7 +139,9 @@ def show_category_items(message):
 # Обработчик выбора блюда
 @bot.message_handler(func=lambda message: message.text.endswith('руб.'))
 def select_item_quantity(message):
-    if len(user_data)==0:
+    user_id = message.from_user.id
+    user_data[user_id] = user_data.get(user_id, {})
+    if len(user_data[user_id])==0:
         trigger_start(message)
         return False
     make_quantity_dialog(bot, message, user_data)
@@ -146,8 +153,8 @@ def add_item_to_order(message):
     user_id = message.from_user.id
     quantity = int(message.text)
     print (user_data)
-
-    if user_id not in user_data or 'selected_item' not in user_data[user_id]:
+    user_data[user_id] = user_data.get(user_id, {})
+    if 'selected_item' not in user_data[user_id]:
         bot.send_message(message.chat.id, "Ошибка: блюдо не выбрано.")
         return
 
