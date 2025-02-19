@@ -149,10 +149,13 @@ def add_item_to_order(message):
 
     # Создание заказа, если его еще нет
     if 'order_id' not in user_data[user_id]:
-        order_id = str(uuid.uuid4())
         user_data[user_id]['order_id'] = order_id
-        food_order_manager.create_order(user_id, total_price=0)
-
+        result =food_order_manager.create_order(user_id, total_price=0)
+        if result[0]:
+            user_data[user_id]['order_id'] = result[1]
+        else:
+            bot.send_message(message.chat.id, f"Ошибка при создании заказа.{result[1]}")
+            return
     # Добавление блюда в заказ
     food_order_manager.add_item_to_order(user_data[user_id]['order_id'], item[0], quantity)
     bot.send_message(message.chat.id, f"{quantity} порций '{item_name}' добавлено в заказ!")
@@ -273,6 +276,7 @@ def show_user_orders(message):
             else:
                 end = "Оплачен "+order[5]
             bot.send_message(message.chat.id, f"#{order[1]}#|{order[3]} | {order[4]} : {order[2]} руб.\n>{end}",)
+        bot.send_message(message.chat.id, f"<b>{"*" * 50}</b>", parse_mode="HTML")
     else:
         bot.send_message(message.chat.id, "У вас пока нет заказов.")
     food_order_manager.db_manager.close()
@@ -399,13 +403,21 @@ def handle_callback_query(call):
             user_data[user_id]['order_id'] = order_pending[-1][0]
             bot.send_message(call.message.chat.id, "Найден незавершенный заказ. Продолжаю заполнение")
         else:
-            order_id = str(uuid.uuid4())
-            user_data[user_id]['order_id'] = order_id
-            food_order_manager.create_order(user_id, total_price=0)
+            result = food_order_manager.create_order(user_id, total_price=0)
+            if result[0]:
+                order_id = result[1]
+                user_data[user_id]['order_id'] = order_id
+            else:
+                bot.send_message(call.message.chat.id, f"Ошибка при создании заказа {result[1]}" )
+                return
 
     # Добавление блюда в заказ
-    food_order_manager.add_item_to_order(user_data[user_id]['order_id'], item[0], quantity)
-    bot.send_message(call.message.chat.id, f"{quantity} порций '{item_name}' добавлено в заказ!")
+    result = food_order_manager.add_item_to_order(user_data[user_id]['order_id'], item[0], quantity)
+    if result:
+        text = f"{quantity} порций '{item_name}' добавлено в заказ!"
+    else:
+        text = f"Ошибка при добавлении порций '{item_name}' в заказ!"
+    bot.send_message(call.message.chat.id, text)
     food_order_manager.update_all_orders()
 
 

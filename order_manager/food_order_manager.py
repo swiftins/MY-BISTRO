@@ -77,7 +77,7 @@ class FoodOrderManager:
         return self.db_manager.insert_data(query, params)
     def get_order_status(self, order_id):
         query = "SELECT status FROM orders WHERE id = ?"
-        return self.db_manager.fetch_data(query, (order_id,))
+        return self.db_manager.fetch_data(query, (order_id,)),order_id
 
     def add_item_to_order(self, order_id, menu_item_id, quantity):
         """Добавить блюдо в заказ."""
