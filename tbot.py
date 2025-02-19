@@ -149,7 +149,7 @@ def add_item_to_order(message):
 
     # Создание заказа, если его еще нет
     if 'order_id' not in user_data[user_id]:
-        user_data[user_id]['order_id'] = order_id
+        user_data[user_id]['order_id'] = None
         result =food_order_manager.create_order(user_id, total_price=0)
         if result[0]:
             user_data[user_id]['order_id'] = result[1]
@@ -195,7 +195,7 @@ def checkout_order(message):
         order_id = user_data[user_id]['order_id']
         status=food_order_manager.get_order_status(order_id)
         if status:
-            status = status[0][0]
+            status = status[0][0][0]
             if status != "pending":
                 del(user_data[user_id]['order_id'])
                 order_id=None
@@ -303,9 +303,9 @@ def handle_csv(message):
 def handle_unprocessed_messages(message):
     print(f"Необработанное сообщение от {message.from_user.username or message.from_user.first_name}: {message.text}")
 
+
 @bot.callback_query_handler(func=lambda call: call.data == ('Оплатить'))
-def handle_delete_callback(call):
-    # Извлекаем данные после 'delete_'
+def handle_pay_callback(call):
     user_id = call.from_user.id
     if user_id in user_data and "order_id" in user_data[user_id] :
         food_order_manager = init_fo_manager()
@@ -331,8 +331,9 @@ def handle_delete_callback(call):
     ).start()
 
 
-
-
+@bot.callback_query_handler(func=lambda call: call.data == ('Назад'))
+def handle_back_callback(call):
+    bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 
@@ -406,7 +407,7 @@ def handle_callback_query(call):
             result = food_order_manager.create_order(user_id, total_price=0)
             if result[0]:
                 order_id = result[1]
-                user_data[user_id]['order_id'] = order_id
+                user_data[user_id]['order_id'] = result[1]
             else:
                 bot.send_message(call.message.chat.id, f"Ошибка при создании заказа {result[1]}" )
                 return
