@@ -20,6 +20,7 @@ def show_main_menu(bot,message,user_data):
 
 def show_menu_categories(bot,message,categories,user_data):
     category = [row[1] for row in categories]
+    category.append("Оформить заказ")
 
     print(message.chat.id)
     keyboard = create_reply_kbd(row_width=3, values=category, back="Назад")
@@ -31,6 +32,7 @@ def show_menu_categories(bot,message,categories,user_data):
 
 def show_menu_category_items(bot,message,items,user_data):
     item = [f"{row[2]} - {row[4]} руб." for row in items]
+    item.append("Оформить заказ")
     keyboard = create_reply_kbd(row_width=3, values=item, back="Назад")
     bot.send_message(message.chat.id, "Выберите блюдо:", reply_markup=keyboard)
     user_data[message.from_user.id].update( {"step": "Item_menu", "category": items[0][1]})
@@ -69,6 +71,7 @@ def make_menu_category_items(bot,message,user_data):
     category_id = next(
         category[0] for category in food_order_manager.get_menu_categories() if category[1] == category_name)
     items = food_order_manager.get_menu_items(category_id=category_id)
+
     show_menu_category_items(bot, message, items, user_data)
     food_order_manager.db_manager.close()
     bot.delete_message(message.chat.id, message.message_id)

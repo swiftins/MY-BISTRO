@@ -74,7 +74,7 @@ class FoodOrderManager:
             VALUES (?, ?, ?, ?)
         """
         params = (order_id, user_id, status, total_price)
-        return self.db_manager.insert_data(query, params)
+        return self.db_manager.insert_data(query, params), order_id
     def get_order_status(self, order_id):
         query = "SELECT status FROM orders WHERE id = ?"
         return self.db_manager.fetch_data(query, (order_id,)),order_id
