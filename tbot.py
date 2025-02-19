@@ -10,7 +10,11 @@ from db_module import DBConnector, DBManager
 import uuid
 import os
 import csv
-from design import show_main_menu, show_menu_categories, show_menu_category_items, select_quantity
+from design import (show_main_menu,
+                    show_menu_categories,
+                    show_menu_category_items,
+                    select_quantity,
+                    show_help)
 from design import (make_menu_categories,
                     make_menu_category_items,
                     make_quantity_dialog,
@@ -98,6 +102,10 @@ def start(message):
     food_order_manager.db_manager.close()
     print(user_data)
 
+@bot.message_handler(commands=['help'])
+def help(message):
+    show_help(bot, message, user_data)
+    bot.delete_message(message.chat.id, message.message_id)
 
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
@@ -252,7 +260,12 @@ def go_back(message):
         trigger_start(message)
         return False
     print(user_data)
-    usr_data = user_data[message.from_user.id]
+    usr_data = user_data.get(message.from_user.id)
+    if usr_data is None or usr_data.get("step") is None:
+        show_main_menu(bot, message, user_data)
+        bot.delete_message(message.chat.id, message.message_id)
+        return
+
     #previous_step = menu_tree_previous[usr_data["step"]][0]
     previous_menu = menu_tree_previous[usr_data["step"]][1]
     previous_menu(bot, message, user_data)
@@ -370,7 +383,7 @@ def handle_delete_callback(call):
 
 
 # Добавление блюда в заказ
-@bot.callback_query_handler(func=lambda call: True)
+@bot.callback_query_handler(func=lambda call: call.data.isdigit())
 def handle_callback_query(call):
     print(f"Callback query from {call.from_user.username or call.from_user.first_name}: {call.data}")
     user_id = call.from_user.id
