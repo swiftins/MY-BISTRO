@@ -92,9 +92,12 @@ class FoodOrderManager:
 
     def get_user_orders_by_status(self, user_id, status="pending"):
         """Получить все заказы пользователя."""
-        query = "SELECT * FROM orders WHERE user_id = ? AND status = ?"
-        return self.db_manager.fetch_data(query, (user_id,status))
-
+        if status:
+            query = "SELECT * FROM orders WHERE user_id = ? AND status = ?"
+            return self.db_manager.fetch_data(query, (user_id,status))
+        else:
+            query = "SELECT * FROM orders WHERE user_id = ?"
+            return self.db_manager.fetch_data(query, (user_id,))
 
     def get_order_items(self, order_id):
         """Получить все блюда в заказе."""
@@ -134,6 +137,33 @@ class FoodOrderManager:
             GROUP BY oi.order_id
             ), 0);"""
         return self.db_manager.update_data(query)
+
+    def get_order_by_id_or_user_id(self,order_id=None,user_id=None):
+        query = """
+        SELECT
+        o.id,
+        (SUBSTR(u.first_name, 1, 1) || SUBSTR(u.last_name, 1, 1) || strftime('%Y%m%d%H%M', datetime(o.created_at))) as order_num,
+        SUM(oi.quantity * mi.price) as total,
+        (u.first_name||' '||u.last_name) as full_name,
+        o.created_at,
+        coalesce(o.payed_at,"") as payed_at
+        FROM orders as o
+        INNER JOIN users as u on u.telegram_id = o.user_id
+        INNER JOIN order_items as oi on o.id = oi.order_id
+        INNER JOIN menu_items as mi on oi.menu_item_id = mi.id
+        """
+        params = []
+        if order_id or user_id:
+            query += "WHERE "
+        if order_id:
+            query += f"o.id = ? "
+            params.append(order_id)
+        if user_id:
+            query += f"o.user_id = ?"
+            params.append(user_id)
+        query += " GROUP BY o.id;"
+        return self.db_manager.fetch_data(query, tuple(params))
+
 
 def init_fo_manager(db_type='sqlite'):
     db_connector = DBConnector(db_type)

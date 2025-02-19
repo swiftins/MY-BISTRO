@@ -1,8 +1,9 @@
 import telebot
 import sqlite3
 
+
 # Инициализация бота
-TOKEN = "7918967502:AAGbpGfUYbw0M5QphKGF0TR-8jnDYJsjEmw"
+TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
 bot = telebot.TeleBot(TOKEN)
 
 # Подключение к базе данных

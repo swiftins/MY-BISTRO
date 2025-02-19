@@ -1,6 +1,9 @@
+from  dotenv import load_dotenv
+import os
 from types import SimpleNamespace
 import telebot
 from telebot import types
+import threading
 
 from order_manager import FoodOrderManager, init_fo_manager
 from db_module import DBConnector, DBManager
@@ -13,10 +16,12 @@ from design import (make_menu_categories,
                     make_quantity_dialog,
                     menu_tree_previous,
                     create_keyboard_variable_rows)
+from payment import process_payment_animation
 
-# Инициализация бота
-TOKEN = '7265481895:AAEiGtEWswZa-Jz0CMf63j-zn9-wWcaOzME'
-#TOKEN = "7918967502:AAGbpGfUYbw0M5QphKGF0TR-8jnDYJsjEmw"
+# Инициализация бота и загрузка переменных окружения из .venv/.env
+env_path = os.path.join(os.path.dirname(__file__), ".venv", ".env")
+load_dotenv(env_path)
+TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 # Глобальная переменная для максимального количества порций
@@ -70,7 +75,7 @@ def start(message):
     order_pending = food_order_manager.get_user_orders_by_status(user_id)[-1]
     if len(order_pending) > 0:
         user_data[user_id]['order_id'] = order_pending[0]
-    user_data[user_id]["old_message"] = message
+    #user_data[user_id]["old_message"] = message
 
 
     username = message.from_user.username
@@ -87,7 +92,7 @@ def start(message):
         bot.send_message(message.chat.id, f"👏С возвращением, {full_name} !🤗")
 
     # Отправка главного меню
-    old_message = show_main_menu(bot,message,user_data)
+    user_data[user_id]["old_message"] = show_main_menu(bot,message,user_data)
     food_order_manager.db_manager.close()
     print(user_data)
 
@@ -113,12 +118,6 @@ def show_category_items(message):
         return False
     make_menu_category_items(bot, message, user_data)
     bot.delete_message(message.chat.id, message.message_id)
-    # food_order_manager = init_fo_manager()
-    # category_name = message.text
-    # category_id = next(category[0] for category in food_order_manager.get_menu_categories() if category[1] == category_name)
-    # items = food_order_manager.get_menu_items(category_id=category_id)
-    # show_menu_category_items(bot,message,items, user_data)
-    # food_order_manager.db_manager.close()
 
 # Обработчик выбора блюда
 @bot.message_handler(func=lambda message: message.text.endswith('руб.'))
@@ -225,7 +224,8 @@ def clear_chat(message):
         try:
             bot.delete_message(chat_id, msg_id)
         except Exception as e:
-            print(f"Не удалось удалить сообщение с ID {msg_id}: {e}")
+            pass
+            #print(f"Не удалось удалить сообщение с ID {msg_id}: {e}")
 
 @bot.message_handler(func=lambda message: message.text == 'X' or message.text == 'Назад' or message.text == '0' or message.text == '❌')
 def go_back(message):
@@ -247,10 +247,16 @@ def show_user_orders(message):
     print(f"{user_id} - Нажал 'Мои заказы'")
     bot.delete_message(message.chat.id, message.message_id)
     food_order_manager.update_all_orders()
-    orders = food_order_manager.get_user_orders(user_id)
+    orders = food_order_manager.get_order_by_id_or_user_id(user_id=user_id)
+    #orders = food_order_manager.get_user_orders(user_id)
     if orders:
+        bot.send_message(message.chat.id,f"<b>{"*"*20} Заказы {"*"*20}</b>", parse_mode="HTML")
         for order in orders:
-            bot.send_message(message.chat.id, f"Заказ #{order[0]}: {order[2]}, Сумма: {order[3]} руб.")
+            if order[5]=="":
+                end ="В работе"
+            else:
+                end = "Оплачен "+order[5]
+            bot.send_message(message.chat.id, f"#{order[1]}#|{order[3]} | {order[4]} : {order[2]} руб.\n>{end}",)
     else:
         bot.send_message(message.chat.id, "У вас пока нет заказов.")
     food_order_manager.db_manager.close()
@@ -285,6 +291,33 @@ def handle_close_order_callback(call):
         del user_data[user_id]["order_id"]
     bot.send_message(call.id, "Сколько вы хотите?")
     bot.delete_message(call.message.chat.id, call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == ('Оплатить'))
+def handle_delete_callback(call):
+    # Извлекаем данные после 'delete_'
+    user_id = call.from_user.id
+    if user_id in user_data and "order_id" in user_data[user_id] :
+        food_order_manager = init_fo_manager()
+        order_id = user_data[user_id]["order_id"]
+        order = food_order_manager.get_order_by_id_or_user_id(user_id=user_id,order_id=order_id)[0]
+    else:
+        bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
+        trigger_start(call.message)
+        return
+    threading.Thread(
+        target=process_payment_animation,
+        args=(bot,
+              call.message,
+              order[1],
+              order[3],
+              order[2]
+              )
+    ).start()
+
+
+
+
+
 
 # Удаление блюда из заказа
 @bot.callback_query_handler(func=lambda call: call.data.startswith('delete_'))

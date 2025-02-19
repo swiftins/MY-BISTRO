@@ -1,6 +1,6 @@
 DB_CONFIG = {
     'sqlite': {
-        'database': 'test_food_orders.db'
+        'database': 'food_orders.db'
     },
     'postgresql': {
         'database': 'example_db',

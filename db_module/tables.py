@@ -22,6 +22,7 @@ tables = {
         status TEXT NOT NULL,
         total_price NUMERIC,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        payed_at TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
     """,
     "order_items" : """

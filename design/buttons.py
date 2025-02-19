@@ -112,6 +112,6 @@ def create_keyboard_variable_rows(data):
         buttons = [types.InlineKeyboardButton(text=col, callback_data="noop") for col in row_showing]
         buttons.append(types.InlineKeyboardButton(text="❌", callback_data=f"delete_{row[0]}"))
         keyboard.add(*buttons)
-    buttons = [types.InlineKeyboardButton(text=col, callback_data=col) for col in ["Оформить заказ","Назад"]]
+    buttons = [types.InlineKeyboardButton(text=col, callback_data=col) for col in ["Оплатить","Назад"]]
     keyboard.add(*buttons)
     return keyboard
