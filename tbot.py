@@ -106,7 +106,6 @@ def start(message):
 @bot.message_handler(commands=['help'])
 def help(message):
     show_help(bot, message, user_data)
-    bot.delete_message(message.chat.id, message.message_id)
 
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
@@ -122,6 +121,12 @@ def show_menu(message):
 
     bot.delete_message(message.chat.id, message.message_id)
     print(user_data)
+
+@bot.message_handler(func=lambda message: message.text == 'Выйти')
+def close_menu(message):
+    bot.delete_message(message.chat.id, message.message_id)
+    msg =bot.send_message(message.chat.id, "<<< ", reply_markup=types.ReplyKeyboardRemove())  # Пустое сообщение
+    bot.delete_message(message.chat.id, msg.message_id)
 
 # Показать блюда в категории
 @bot.message_handler(func=lambda message: message.text in [category[1] for category in init_fo_manager().get_menu_categories()])
