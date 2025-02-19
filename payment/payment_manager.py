@@ -1,6 +1,9 @@
 from telebot.types import Message
+import time
 
-def process_payment_animation(bot,message: Message, order_number: str, username: str, amount: float):
+from order_manager import init_fo_manager
+
+def process_payment_animation(bot,message: Message, order_number: str, username: str, amount: float, order_id):
     """
     Создает и обновляет анимированное сообщение о процессе оплаты
     """
@@ -58,7 +61,7 @@ def process_payment_animation(bot,message: Message, order_number: str, username:
         f"*Заказ:* `{order_number}`\n"
         f"*Покупатель:* {username}\n"
         f"*Сумма:* {amount:,.2f} ₽\n\n"
-        f"Спасибо за покупку! 🎉"
+        f"Спасибо за заказ! 🎉"
     )
 
     bot.edit_message_text(
@@ -67,4 +70,6 @@ def process_payment_animation(bot,message: Message, order_number: str, username:
         message_id=payment_message.message_id,
         parse_mode='Markdown'
     )
+    food_order_manager = init_fo_manager()
+    food_order_manager.update_order_status(order_id,"payed")
 

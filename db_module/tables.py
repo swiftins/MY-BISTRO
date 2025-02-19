@@ -23,6 +23,7 @@ tables = {
         total_price NUMERIC,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         payed_at TIMESTAMP,
+        handed_at TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
     """,
     "order_items" : """

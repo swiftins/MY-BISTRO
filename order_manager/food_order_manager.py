@@ -75,6 +75,9 @@ class FoodOrderManager:
         """
         params = (order_id, user_id, status, total_price)
         return self.db_manager.insert_data(query, params)
+    def get_order_status(self, order_id):
+        query = "SELECT status FROM orders WHERE id = ?"
+        return self.db_manager.fetch_data(query, (order_id,))
 
     def add_item_to_order(self, order_id, menu_item_id, quantity):
         """Добавить блюдо в заказ."""
@@ -111,7 +114,13 @@ class FoodOrderManager:
 
     def update_order_status(self, order_id, status):
         """Обновить статус заказа."""
-        query = "UPDATE orders SET status = ? WHERE id = ?"
+        text = ""
+        if status != "pending":
+            text = f", {status}_at = CURRENT_TIMESTAMP"
+        query = (f"""UPDATE orders
+                 SET status = ? {text}
+                 WHERE id = ?"""
+                 )
         params = (status, order_id)
         return self.db_manager.update_data(query, params)
 
@@ -149,8 +158,8 @@ class FoodOrderManager:
         coalesce(o.payed_at,"") as payed_at
         FROM orders as o
         INNER JOIN users as u on u.telegram_id = o.user_id
-        INNER JOIN order_items as oi on o.id = oi.order_id
-        INNER JOIN menu_items as mi on oi.menu_item_id = mi.id
+        LEFT JOIN order_items as oi on o.id = oi.order_id
+        LEFT JOIN menu_items as mi on oi.menu_item_id = mi.id
         """
         params = []
         if order_id or user_id:
@@ -158,10 +167,13 @@ class FoodOrderManager:
         if order_id:
             query += f"o.id = ? "
             params.append(order_id)
+            if user_id:
+                query += ' and '
         if user_id:
             query += f"o.user_id = ?"
             params.append(user_id)
         query += " GROUP BY o.id;"
+
         return self.db_manager.fetch_data(query, tuple(params))
 
 

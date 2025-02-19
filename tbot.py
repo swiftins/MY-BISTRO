@@ -72,9 +72,11 @@ def start(message):
     food_order_manager = init_fo_manager()
     user_id = message.from_user.id
     user_data[user_id]={}
-    order_pending = food_order_manager.get_user_orders_by_status(user_id)[-1]
-    if len(order_pending) > 0:
+    order_pending = food_order_manager.get_user_orders_by_status(user_id)
+    if order_pending and len(order_pending) > 0:
+        order_pending = order_pending[-1]
         user_data[user_id]['order_id'] = order_pending[0]
+
     #user_data[user_id]["old_message"] = message
 
 
@@ -100,24 +102,26 @@ def start(message):
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
 def show_menu(message):
-    bot.delete_message(message.chat.id, message.message_id)
+    #bot.delete_message(message.chat.id, message.message_id)
     if message.from_user.id not in user_data:
         trigger_start(message)
         return
     #delete_old_message(message)
     user_data[message.from_user.id]["old_message"] = make_menu_categories(bot,message,user_data)
+
     bot.delete_message(message.chat.id, message.message_id)
     print(user_data)
 
 # Показать блюда в категории
 @bot.message_handler(func=lambda message: message.text in [category[1] for category in init_fo_manager().get_menu_categories()])
 def show_category_items(message):
-    bot.delete_message(message.chat.id, message.message_id)
+    #bot.delete_message(message.chat.id, message.message_id)
     if len(user_data)==0:
         trigger_start(message)
         return False
     make_menu_category_items(bot, message, user_data)
-    bot.delete_message(message.chat.id, message.message_id)
+    print(user_data)
+    #bot.delete_message(message.chat.id, message.message_id)
 
 # Обработчик выбора блюда
 @bot.message_handler(func=lambda message: message.text.endswith('руб.'))
@@ -183,17 +187,29 @@ def checkout_order(message):
     food_order_manager = init_fo_manager()
     user_data[user_id] = user_data.get(user_id, {})
     msg = None
-    if 'order_id' not in user_data[user_id]:
-        order_pending = food_order_manager.get_user_orders_by_status(user_id)[-1]
-        if len(order_pending) > 0:
-            user_data[user_id]['order_id'] = order_pending[0]
+    order_id=None
+    if 'order_id' in user_data[user_id]:
+        order_id = user_data[user_id]['order_id']
+        status=food_order_manager.get_order_status(order_id)
+        if status:
+            status = status[0][0]
+            if status != "pending":
+                del(user_data[user_id]['order_id'])
+                order_id=None
+    if not order_id:
+        order_pending = food_order_manager.get_user_orders_by_status(user_id)
+
+        if order_pending and len(order_pending) > 0:
+            user_data[user_id]['order_id'] = order_pending[-1][0]
             msg = bot.send_message(chat_id, "Найден заказ.")
+        elif not order_pending:
+            msg = bot.send_message(chat_id, "Нет активных заказов.")
+            return
         else:
             msg.bot.send_message(chat_id, "Ваш заказ пуст.")
             return
 
 
-    order_id = user_data[user_id]['order_id']
 
     # Получаем информацию о заказе
     order_items = food_order_manager.get_order_items(order_id)
@@ -283,15 +299,6 @@ def handle_csv(message):
 def handle_unprocessed_messages(message):
     print(f"Необработанное сообщение от {message.from_user.username or message.from_user.first_name}: {message.text}")
 
-# Оформление заказа
-@bot.callback_query_handler(func=lambda call: call.data==('Оформить заказ'))
-def handle_close_order_callback(call):
-    user_id = call.from_user.id
-    if user_id in user_data and "order_id" in user_data[user_id]:
-        del user_data[user_id]["order_id"]
-    bot.send_message(call.id, "Сколько вы хотите?")
-    bot.delete_message(call.message.chat.id, call.message.message_id)
-
 @bot.callback_query_handler(func=lambda call: call.data == ('Оплатить'))
 def handle_delete_callback(call):
     # Извлекаем данные после 'delete_'
@@ -299,7 +306,11 @@ def handle_delete_callback(call):
     if user_id in user_data and "order_id" in user_data[user_id] :
         food_order_manager = init_fo_manager()
         order_id = user_data[user_id]["order_id"]
-        order = food_order_manager.get_order_by_id_or_user_id(user_id=user_id,order_id=order_id)[0]
+        order = food_order_manager.get_order_by_id_or_user_id(user_id=user_id,order_id=order_id)
+        if not order:
+            print("Error in query.")
+            return
+        order=order[0]
     else:
         bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
         trigger_start(call.message)
@@ -310,9 +321,11 @@ def handle_delete_callback(call):
               call.message,
               order[1],
               order[3],
-              order[2]
+              order[2],
+              order_id
               )
     ).start()
+
 
 
 
@@ -381,9 +394,9 @@ def handle_callback_query(call):
 
     # Создание заказа, если его еще нет
     if 'order_id' not in user_data[user_id]:
-        order_pending = food_order_manager.get_user_orders_by_status(user_id)[-1]
-        if len(order_pending) > 0:
-            user_data[user_id]['order_id'] = order_pending[0]
+        order_pending = food_order_manager.get_user_orders_by_status(user_id)
+        if order_pending and len(order_pending) > 0:
+            user_data[user_id]['order_id'] = order_pending[-1][0]
             bot.send_message(call.message.chat.id, "Найден незавершенный заказ. Продолжаю заполнение")
         else:
             order_id = str(uuid.uuid4())
