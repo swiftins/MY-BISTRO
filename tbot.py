@@ -15,7 +15,8 @@ from design import (show_main_menu,
                     show_menu_categories,
                     show_menu_category_items,
                     select_quantity,
-                    show_help)
+                    show_help,
+                    show_feedback)
 from design import (make_menu_categories,
                     make_menu_category_items,
                     make_quantity_dialog,
@@ -106,6 +107,11 @@ def start(message):
 @bot.message_handler(commands=['help'])
 def help(message):
     show_help(bot, message, user_data)
+
+@bot.message_handler(func=lambda message: message.text == 'Отзывы')
+def feedback(message):
+    show_feedback(bot, message, user_data)
+
 
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
