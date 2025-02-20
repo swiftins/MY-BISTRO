@@ -29,6 +29,12 @@ env_path = os.path.join(os.path.dirname(__file__), ".venv", ".env")
 load_dotenv(env_path)
 TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
+commands = [
+    types.BotCommand("start", "Запустить бота"),
+    types.BotCommand("help", "Помощь по командам"),
+    ]
+bot.set_my_commands(commands)
+
 
 # Глобальная переменная для максимального количества порций
 number_of_seats = 8  # Максимальное количество порций
