@@ -36,9 +36,9 @@ def show_menu_category_items(bot,message,items,user_data):
     item = [f"{row[2]} - {row[4]} руб." for row in items]
     item.append("Оформить заказ")
     keyboard = create_reply_kbd(row_width=3, values=item, back="Назад")
-    bot.send_message(message.chat.id, "Выберите блюдо:", reply_markup=keyboard)
+    msg = bot.send_message(message.chat.id, "Выберите блюдо:", reply_markup=keyboard)
     user_data[user_id].update( {"step": "Item_menu", "category": items[0][1]})
-    pass
+    return msg.chat.id, msg.message_id
 
 def select_quantity(bot,message,item_name,image_path=None,number_of_seats = 8,msg = ["",""]):
     user_id = message.from_user.id
@@ -76,9 +76,10 @@ def make_menu_category_items(bot,message,user_data):
         category[0] for category in food_order_manager.get_menu_categories() if category[1] == category_name)
     items = food_order_manager.get_menu_items(category_id=category_id)
 
-    show_menu_category_items(bot, message, items, user_data)
+    msg = show_menu_category_items(bot, message, items, user_data)
     food_order_manager.db_manager.close()
     bot.delete_message(message.chat.id, message.message_id)
+    return msg
 
 def make_quantity_dialog(bot,message,user_data):
     food_order_manager = init_fo_manager()
@@ -166,6 +167,7 @@ def online_pay(bot,message,user_data):
               order[1],
               order[3],
               order[2],
-              order_id
+              order_id,
+              user_data
               )
     ).start()

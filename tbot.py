@@ -149,7 +149,7 @@ def show_category_items(message):
     if not user_data[user_id]:
         trigger_start(message)
         return False
-    make_menu_category_items(bot, message, user_data)
+    user_data[user_id]["old_message"] == make_menu_category_items(bot, message, user_data)
     print(user_data[user_id])
 
 
@@ -306,10 +306,14 @@ def show_user_orders(message):
     if orders:
         bot.send_message(message.chat.id,f"<b>{"*"*20} Заказы {"*"*20}</b>", parse_mode="HTML")
         for order in orders:
-            if order[5]=="":
-                end ="В работе"
-            else:
+            if order[6] == "pending":
+                end = "Оформляется"
+            elif order[6] == "paid":
                 end = "Оплачен "+order[5]
+            elif order[6] == "cash_pending":
+                end ="В работе, оплата наличными"
+            else:
+                end = "Статус неопределен"
             bot.send_message(message.chat.id, f"#{order[1]}#|{order[3]} | {order[4]} : {order[2]} руб.\n>{end}",)
         bot.send_message(message.chat.id, f"<b>{"*" * 50}</b>", parse_mode="HTML")
     else:
@@ -350,7 +354,7 @@ def handle_pay_callback(call):
             print("Error in query.")
             return
         order=order[0]
-        if order[-1] == "":
+        if order[-1] == "pending":
             user_data[user_id]["pay_order"] = order
             bot.delete_message(call.message.chat.id, call.message.message_id)
             user_data[user_id]["old_message"] = show_pay_form(bot,call.message,user_data)
@@ -483,14 +487,14 @@ def handle_callback_query_pay(call):
         online_pay(bot,call.message,user_data)
         return
     order = user_data[user_id]["pay_order"]
-    final_message = (f"💰 Отличный выбор! Оплата наличными – это классика! 💵"
-                     f"*Ваш заказ #*[ {order[1]} ]"
-                     f"*{order[3]}!* Пожалуйста, приготовьте сумму: *{order[2]:,.2f}руб.* к оплате."
-                     f" Вы сможете произвести оплату при получении. 🚀🍽️"
-                     f"Если у вас есть вопросы – мы всегда на связи! 📞😊")
+    final_message = (f"💰 Отличный выбор! Оплата наличными – это классика! 💵\n"
+                     f"*Ваш заказ #*[ {order[1]} ]\n"
+                     f"*{order[3]}!* Пожалуйста, приготовьте сумму: *{order[2]:,.2f}руб.* к оплате.\n"
+                     f" Вы сможете произвести оплату при получении. 🚀🍽️\n"
+                     f"Если у вас есть вопросы – мы всегда на связи! 📞😊\n")
     bot.send_message(call.message.chat.id, final_message, parse_mode = "Markdown")
     food_order_manager = init_fo_manager()
-    food_order_manager.update_order_status(user_data[user_id]["order_id"], "cash_pending")
+    result = food_order_manager.update_order_status(user_data[user_id]["order_id"], "cash_pending")
     food_order_manager.db_manager.close()
 
 
