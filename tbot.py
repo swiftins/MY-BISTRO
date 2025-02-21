@@ -415,9 +415,12 @@ def handle_callback_query(call):
     print(f"Callback query from {call.from_user.username or call.from_user.first_name}: {call.data}")
     user_id = call.from_user.id
     quantity = int(call.data)
+    if quantity <= 0:
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        return
     print(user_data)
 
-    if len(user_data) == 0:
+    if not user_data[user_id]['selected_item']:
         bot.send_message(call.id, "Сессия была прервана. Используйте нижнее меню")
         trigger_start(call.message)
 
@@ -438,7 +441,7 @@ def handle_callback_query(call):
 
 
     # Создание заказа, если его еще нет
-    if 'order_id' not in user_data[user_id]:
+    if  not user_data[user_id]['order_id']:
         order_pending = food_order_manager.get_user_orders_by_status(user_id)
         if order_pending and len(order_pending) > 0:
             user_data[user_id]['order_id'] = order_pending[-1][0]
