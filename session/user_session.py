@@ -18,6 +18,12 @@ class UsersSession:
         print(f"Попытка удалить элемент с ключом: {key}")
         del self._user_sessions[key]
 
+    def __iter__(self):
+        return iter(self._user_sessions.items())
+
+    def __repr__(self):
+        """Отображает объект UsersSession как словарь"""
+        return repr(self._user_sessions)  # Преобразуем _user_sessions в строку
     # def __getattr__(self, item):
     #     print(item)
     #     return self.user_sessions
@@ -67,6 +73,14 @@ class Session:
         else:
             print(f"Нет атрибута с именем {key} для удаления.")
 
+    def __iter__(self):
+        """Позволяет итерироваться по атрибутам как по словарю"""
+        return iter(self.__dict__.items())
+
+    def __repr__(self):
+        """Отображает объект как словарь"""
+        return str(self.__dict__)  # Преобразуем __dict__ в строку
+
     def update(self, attributes):
         """Метод для обновления нескольких атрибутов из словаря."""
         for key, value in attributes.items():
@@ -86,6 +100,3 @@ if __name__ == "__main__":
 
     print(session[708479119]["order_id"])
 
-    #print(session.get(708479119))
-
-    #print(session.get(708479119).get("order_id"))

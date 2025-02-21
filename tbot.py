@@ -17,7 +17,7 @@ from design import (show_main_menu,
                     show_menu_category_items,
                     select_quantity,
                     show_help,
-                    show_feedback)
+                    show_feedback, online_pay)
 from design import (make_menu_categories,
                     make_menu_category_items,
                     make_quantity_dialog,
@@ -41,23 +41,12 @@ bot.set_my_commands(commands)
 number_of_seats = 8  # Максимальное количество порций
 
 
-# Инициализация менеджера заказов
-# def init_fo_manager(db_type='sqlite'):
-#     db_connector = DBConnector(db_type)
-#     db_manager = DBManager(db_connector)
-#     return FoodOrderManager(db_manager)
-
-# Состояния для обработки заказов
-#sessions =
-#user_data = {}
 user_data = UsersSession()
 
 def delete_old_message(message):
     user_id = message.from_user.id
-    user_data.get(user_id)
-    user_data[user_id]["old_message"] = user_data[user_id].get("old_message", None)
     if user_data[user_id]["old_message"] is not None:
-        bot.delete_message(message.chat.id, user_data[user_id]["old_message"])
+        bot.delete_message(message.chat.id, user_data[user_id]["old_message"][1])
         user_data[message.from_user.id]["old_message"] = None
 
 
@@ -82,6 +71,7 @@ def trigger_start(chat_id):
 @bot.message_handler(commands=['start'])
 def start(message):
     if hasattr(message, 'message_id'):
+        delete_old_message(message)
         bot.delete_message(message.chat.id, message.message_id)
     food_order_manager = init_fo_manager()
     user_id = message.from_user.id
@@ -115,17 +105,19 @@ def start(message):
 
 @bot.message_handler(commands=['help'])
 def help(message):
+    delete_old_message(message)
     show_help(bot, message, user_data)
 
 @bot.message_handler(func=lambda message: message.text == 'Отзывы')
 def feedback(message):
+    delete_old_message(message)
     show_feedback(bot, message, user_data)
 
 
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
 def show_menu(message):
-    #bot.delete_message(message.chat.id, message.message_id)
+    delete_old_message(message)
     user_id = message.from_user.id
     #user_data[user_id] = user_data.get(user_id, {})
     if not user_data[user_id]:
@@ -135,30 +127,33 @@ def show_menu(message):
     user_data[user_id]["old_message"] = make_menu_categories(bot,message,user_data)
 
     bot.delete_message(message.chat.id, message.message_id)
-    print(user_data)
+    print(user_data[user_id])
 
 @bot.message_handler(func=lambda message: message.text == 'Выйти')
 def close_menu(message):
+    delete_old_message(message)
     bot.delete_message(message.chat.id, message.message_id)
-    msg =bot.send_message(message.chat.id, "<<< ", reply_markup=types.ReplyKeyboardRemove())  # Пустое сообщение
+    msg =bot.send_message(message.chat.id, " ", reply_markup=types.ReplyKeyboardRemove())  # Пустое сообщение
     bot.delete_message(message.chat.id, msg.message_id)
+
 
 # Показать блюда в категории
 @bot.message_handler(func=lambda message: message.text in [category[1] for category in init_fo_manager().get_menu_categories()])
 def show_category_items(message):
-    #bot.delete_message(message.chat.id, message.message_id)
+    delete_old_message(message)
     user_id = message.from_user.id
     # user_data[user_id] = user_data.get(user_id, {})
     if not user_data[user_id]:
         trigger_start(message)
         return False
     make_menu_category_items(bot, message, user_data)
-    print(user_data)
-    #bot.delete_message(message.chat.id, message.message_id)
+    print(user_data[user_id])
+
 
 # Обработчик выбора блюда
 @bot.message_handler(func=lambda message: message.text.endswith('руб.'))
 def select_item_quantity(message):
+    delete_old_message(message)
     user_id = message.from_user.id
     # user_data[user_id] = user_data.get(user_id, {})
     if not user_data[user_id]:
@@ -170,6 +165,7 @@ def select_item_quantity(message):
 #@bot.message_handler(func=lambda message: message.text.endswith('шт.'))
 @bot.message_handler(func=lambda message: message.text.isdigit() and 1<=int(message.text) <= number_of_seats)
 def add_item_to_order(message):
+    #delete_old_message(message)
     user_id = message.from_user.id
     quantity = int(message.text)
     print (user_data)
@@ -282,6 +278,7 @@ def clear_chat(message):
 
 @bot.message_handler(func=lambda message: message.text == 'X' or message.text == 'Назад' or message.text == '0' or message.text == '❌')
 def go_back(message):
+    delete_old_message(message)
     user_id = message.from_user.id
     # if not user_data[user_id]["order_id"]:
     #     trigger_start(message)
@@ -343,11 +340,11 @@ def handle_csv(message):
 def handle_unprocessed_messages(message):
     print(f"Необработанное сообщение от {message.from_user.username or message.from_user.first_name}: {message.text}")
 
-
+# Обработка оплаты
 @bot.callback_query_handler(func=lambda call: call.data == ('Оплатить'))
 def handle_pay_callback(call):
     user_id = call.from_user.id
-    if user_data[user_id]["order_id"] :
+    if user_data[user_id]["order_id"] and isinstance(user_data[user_id]["order_form"],types.Message) :
         food_order_manager = init_fo_manager()
         order_id = user_data[user_id]["order_id"]
         order = food_order_manager.get_order_by_id_or_user_id(user_id=user_id,order_id=order_id)
@@ -355,20 +352,28 @@ def handle_pay_callback(call):
             print("Error in query.")
             return
         order=order[0]
+        if order[-1] == "":
+            user_data[user_id]["pay_order"] = order
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+            online_pay(bot,call.message,user_data)
+            # threading.Thread(
+            #     target=process_payment_animation,
+            #     args=(bot,
+            #           call.message,
+            #           order[1],
+            #           order[3],
+            #           order[2],
+            #           order_id
+            #           )
+            # ).start()
+
     else:
+        bot.delete_message(call.message.chat.id, call.message.message_id)
         bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
         trigger_start(call.message)
         return
-    threading.Thread(
-        target=process_payment_animation,
-        args=(bot,
-              call.message,
-              order[1],
-              order[3],
-              order[2],
-              order_id
-              )
-    ).start()
+
+
 
 
 @bot.callback_query_handler(func=lambda call: call.data == ('Назад'))

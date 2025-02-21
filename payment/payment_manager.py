@@ -72,4 +72,6 @@ def process_payment_animation(bot,message: Message, order_number: str, username:
     )
     food_order_manager = init_fo_manager()
     food_order_manager.update_order_status(order_id,"payed")
+    food_order_manager.db_manager.close()
+
 

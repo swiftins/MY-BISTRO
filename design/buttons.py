@@ -2,13 +2,16 @@ from math import ceil
 import telebot
 from telebot import types
 
+
+
 def create_tile_kbd(keyboard,
                     row_width=1,
                     nums=1,
                     msg=["", "",],
                     splitter="",
                     values=None,
-                    back ="❌"):
+                    back ="❌",
+                    keys = []):
 
     """
     Универсальная функция для создания плиточной клавиатуры.
@@ -22,6 +25,7 @@ def create_tile_kbd(keyboard,
     - splitter: Разделитель между частями текста кнопки (по умолчанию "").
     - values: Список значений для текста кнопок или одиночное значение (по умолчанию None).
     - back: Если не None, то 0-ое значение заменяется на значение back
+    - keys: Значения callback для Inline кнопок, присваиваются, если не None
 
     Возвращает:
     - Клавиатуру с добавленными кнопками.
@@ -66,6 +70,8 @@ def create_tile_kbd(keyboard,
 
             # Если это Inline кнопка, добавляем callback_data
             if btntype == types.InlineKeyboardButton:
+                if val <= len(keys) -1:
+                    val = keys[val]
                 btns.append(btntype(text, callback_data=f"{val}"))
             else:
                 btns.append(btntype(text))
@@ -89,7 +95,7 @@ def create_reply_kbd(row_width=2, values=[], back ="X"):
     create_tile_kbd(keyboard, row_width=row_width, msg=["Категория ", ""], values=values, back=back)
     return keyboard
 
-def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""]):
+def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""], keys=[]):
     """
     Создает Inline клавиатуру с плиточными кнопками.
 
@@ -102,7 +108,7 @@ def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""]):
     - Inline клавиатуру с добавленными кнопками.
     """
     keyboard = types.InlineKeyboardMarkup( row_width=row_width)
-    create_tile_kbd(keyboard, row_width=row_width, nums=nums, msg=msg, values=values)
+    create_tile_kbd(keyboard, row_width=row_width, nums=nums, msg=msg, values=values, keys = keys)
     return keyboard
 
 def create_keyboard_variable_rows(data):
