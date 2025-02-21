@@ -4,12 +4,13 @@ from types import SimpleNamespace
 import telebot
 from telebot import types
 import threading
-
-from order_manager import FoodOrderManager, init_fo_manager
-from db_module import DBConnector, DBManager
 import uuid
 import os
 import csv
+
+from order_manager import FoodOrderManager, init_fo_manager
+from db_module import DBConnector, DBManager
+from session import UsersSession
 
 from design import (show_main_menu,
                     show_menu_categories,
@@ -47,12 +48,13 @@ number_of_seats = 8  # Максимальное количество порци�
 #     return FoodOrderManager(db_manager)
 
 # Состояния для обработки заказов
-sessions = {}
-user_data = {}
+#sessions =
+#user_data = {}
+user_data = UsersSession()
 
 def delete_old_message(message):
     user_id = message.from_user.id
-    user_data[user_id] = user_data.get(user_id, {})
+    user_data.get(user_id)
     user_data[user_id]["old_message"] = user_data[user_id].get("old_message", None)
     if user_data[user_id]["old_message"] is not None:
         bot.delete_message(message.chat.id, user_data[user_id]["old_message"])
@@ -83,11 +85,12 @@ def start(message):
         bot.delete_message(message.chat.id, message.message_id)
     food_order_manager = init_fo_manager()
     user_id = message.from_user.id
-    user_data[user_id] = user_data.get(user_id, {})
-    order_pending = food_order_manager.get_user_orders_by_status(user_id)
-    if order_pending and len(order_pending) > 0:
-        order_pending = order_pending[-1]
-        user_data[user_id]['order_id'] = order_pending[0]
+    # user_data[user_id] = user_data.get(user_id, {})
+    if user_data[user_id]["order_id"] is None:
+        order_pending = food_order_manager.get_user_orders_by_status(user_id)
+        if order_pending and len(order_pending) > 0:
+            order_pending = order_pending[-1]
+            user_data[user_id]['order_id'] = order_pending[0]
 
     #user_data[user_id]["old_message"] = message
 
@@ -124,8 +127,8 @@ def feedback(message):
 def show_menu(message):
     #bot.delete_message(message.chat.id, message.message_id)
     user_id = message.from_user.id
-    user_data[user_id] = user_data.get(user_id, {})
-    if message.from_user.id not in user_data:
+    #user_data[user_id] = user_data.get(user_id, {})
+    if not user_data[user_id]:
         trigger_start(message)
         return
     #delete_old_message(message)
@@ -145,8 +148,8 @@ def close_menu(message):
 def show_category_items(message):
     #bot.delete_message(message.chat.id, message.message_id)
     user_id = message.from_user.id
-    user_data[user_id] = user_data.get(user_id, {})
-    if len(user_data[user_id])==0:
+    # user_data[user_id] = user_data.get(user_id, {})
+    if not user_data[user_id]:
         trigger_start(message)
         return False
     make_menu_category_items(bot, message, user_data)
@@ -157,8 +160,8 @@ def show_category_items(message):
 @bot.message_handler(func=lambda message: message.text.endswith('руб.'))
 def select_item_quantity(message):
     user_id = message.from_user.id
-    user_data[user_id] = user_data.get(user_id, {})
-    if len(user_data[user_id])==0:
+    # user_data[user_id] = user_data.get(user_id, {})
+    if not user_data[user_id]:
         trigger_start(message)
         return False
     make_quantity_dialog(bot, message, user_data)
@@ -171,7 +174,7 @@ def add_item_to_order(message):
     quantity = int(message.text)
     print (user_data)
     user_data[user_id] = user_data.get(user_id, {})
-    if 'selected_item' not in user_data[user_id]:
+    if not user_data[user_id]['selected_item']:
         bot.send_message(message.chat.id, "Ошибка: блюдо не выбрано.")
         return
 
@@ -180,8 +183,7 @@ def add_item_to_order(message):
     item = next(item for item in food_order_manager.get_menu_items() if item[2] == item_name)
 
     # Создание заказа, если его еще нет
-    if 'order_id' not in user_data[user_id]:
-        user_data[user_id]['order_id'] = None
+    if  not user_data[user_id]['order_id']:
         result =food_order_manager.create_order(user_id, total_price=0)
         if result[0]:
             user_data[user_id]['order_id'] = result[1]
@@ -220,10 +222,10 @@ def checkout_order(message):
     user_id = message.from_user.id
     print(f"{user_id} - Нажал 'Оформить заказ'")
     food_order_manager = init_fo_manager()
-    user_data[user_id] = user_data.get(user_id, {})
+    #user_data[user_id] = user_data.get(user_id, {})
     msg = None
     order_id=None
-    if 'order_id' in user_data[user_id]:
+    if  user_data[user_id]['order_id'] :
         order_id = user_data[user_id]['order_id']
         status=food_order_manager.get_order_status(order_id)
         if status:
@@ -280,18 +282,19 @@ def clear_chat(message):
 
 @bot.message_handler(func=lambda message: message.text == 'X' or message.text == 'Назад' or message.text == '0' or message.text == '❌')
 def go_back(message):
-    if len(user_data)==0:
-        trigger_start(message)
-        return False
-    print(user_data)
-    usr_data = user_data.get(message.from_user.id)
-    if usr_data is None or usr_data.get("step") is None:
+    user_id = message.from_user.id
+    # if not user_data[user_id]["order_id"]:
+    #     trigger_start(message)
+    #     return False
+    # print(user_data)
+    #usr_data = user_data.get(message.from_user.id)
+    if user_data[user_id] is None or user_data[user_id]["step"] is None:
         show_main_menu(bot, message, user_data)
         bot.delete_message(message.chat.id, message.message_id)
         return
 
     #previous_step = menu_tree_previous[usr_data["step"]][0]
-    previous_menu = menu_tree_previous[usr_data["step"]][1]
+    previous_menu = menu_tree_previous[user_data[user_id]["step"]][1]
     previous_menu(bot, message, user_data)
     bot.delete_message(message.chat.id, message.message_id)
 
@@ -344,7 +347,7 @@ def handle_unprocessed_messages(message):
 @bot.callback_query_handler(func=lambda call: call.data == ('Оплатить'))
 def handle_pay_callback(call):
     user_id = call.from_user.id
-    if user_id in user_data and "order_id" in user_data[user_id] :
+    if user_data[user_id]["order_id"] :
         food_order_manager = init_fo_manager()
         order_id = user_data[user_id]["order_id"]
         order = food_order_manager.get_order_by_id_or_user_id(user_id=user_id,order_id=order_id)
@@ -379,7 +382,7 @@ def handle_back_callback(call):
 def handle_delete_callback(call):
     # Извлекаем данные после 'delete_'
     user_id = call.from_user.id
-    if user_id in user_data and "order_form" in user_data[user_id] :
+    if user_data[user_id]["order_form"]:
         item_to_delete = call.data[len('delete_'):]
     else:
         bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
@@ -422,7 +425,7 @@ def handle_callback_query(call):
         bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
         return
 
-    if user_id not in user_data or 'selected_item' not in user_data[user_id]:
+    if not user_data[user_id]["selected_item"]:
         bot.send_message(call.message.chat.id, "Ошибка: блюдо не выбрано.")
         return
 

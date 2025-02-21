@@ -15,7 +15,7 @@ def show_main_menu(bot,message,user_data):
     keyboard = create_reply_kbd(row_width=2, values=main_menu, back = None)
     old_message = bot.send_message(message.chat.id, "Выберите действие:", reply_markup=keyboard)
     print(user_data)
-    user_data.setdefault(user_id,{})["step"]= "Main_menu"
+    user_data[user_id]["step"]= "Main_menu"
     return old_message
 
 def show_menu_categories(bot,message,categories,user_data):
@@ -26,7 +26,7 @@ def show_menu_categories(bot,message,categories,user_data):
     print(message.chat.id)
     keyboard = create_reply_kbd(row_width=3, values=category, back="Назад")
     old_message = bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=keyboard)
-    user_data.setdefault(user_id, {})["step"] = "Category_menu"
+    user_data[user_id]["step"] = "Category_menu"
     return old_message
 
 def show_menu_category_items(bot,message,items,user_data):
@@ -35,7 +35,7 @@ def show_menu_category_items(bot,message,items,user_data):
     item.append("Оформить заказ")
     keyboard = create_reply_kbd(row_width=3, values=item, back="Назад")
     bot.send_message(message.chat.id, "Выберите блюдо:", reply_markup=keyboard)
-    user_data.setdefault(user_id, {}).update( {"step": "Item_menu", "category": items[0][1]})
+    user_data[user_id].update( {"step": "Item_menu", "category": items[0][1]})
     pass
 
 def select_quantity(bot,message,item_name,image_path=None,number_of_seats = 8,msg = ["",""]):
@@ -85,7 +85,7 @@ def make_quantity_dialog(bot,message,user_data):
     item_id=item_info[0]
     item_category = food_order_manager.get_menu_categories(item_info[1])[0][1]
     item_caption = f"<u><b>{item_name}</b> - {item_info[4]} руб.</u>\n{item_info[3]}"
-    user_data.setdefault(user_id, {}).update({
+    user_data[user_id].update({
         'selected_item' : item_name,
         "step":"Item_quantity",
         "item_id":item_id,
