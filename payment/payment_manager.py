@@ -2,11 +2,15 @@ from telebot.types import Message
 import time
 
 from order_manager import init_fo_manager
+#from tbot import user_data
+
 
 def process_payment_animation(bot,message: Message, order_number: str, username: str, amount: float, order_id):
     """
     Создает и обновляет анимированное сообщение о процессе оплаты
     """
+    user_id = message.chat.id
+
     # Начальное сообщение
     payment_message = bot.send_message(
         message.chat.id,
@@ -73,5 +77,7 @@ def process_payment_animation(bot,message: Message, order_number: str, username:
     food_order_manager = init_fo_manager()
     food_order_manager.update_order_status(order_id,"payed")
     food_order_manager.db_manager.close()
+    user_data[user_id]["pay_order"] = None
+
 
 

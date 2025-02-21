@@ -111,6 +111,7 @@ def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""], keys=[]):
     create_tile_kbd(keyboard, row_width=row_width, nums=nums, msg=msg, values=values, keys = keys)
     return keyboard
 
+# формируем клавиатуру с кнопками из массива строк
 def create_keyboard_variable_rows(data):
     keyboard = types.InlineKeyboardMarkup(row_width=len(data[0])+1)
     for index, row in enumerate(data):

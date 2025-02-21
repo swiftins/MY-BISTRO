@@ -140,14 +140,14 @@ def show_feedback(bot,message,user_data):
 
 def show_pay_form(bot,message,user_data):
     user_id = message.from_user.id
-    keyboard = create_inline_kbd(row_width=3, nums=3, values=["💳Картой 💳","💵 Наличными 💵", "📱 Мобильная оплата 📱"], keys=["pay_card","pay_cache","pay_mobile"] )
+    keyboard = create_inline_kbd(row_width=2, nums=3, values=["💳Картой 💳","💵 Наличными 💵", "📱 Мобильная оплата 📱"], keys=['Назад',"pay_card","pay_cache","pay_mobile"] )
     image_path = r"img\pay_method.png"
     if not os.path.exists(image_path):  # and os.path.isfile(file_path):
         image_path = os.path.join('img', 'empty.jpg')
     with open(image_path, 'rb') as photo:
         msg = bot.send_photo(message.chat.id,
                              photo=photo,
-                             caption=f"💰 Способ оплаты 💰",
+                             caption=f"💰      Способ оплаты      💰",
                              reply_markup=keyboard,
                              parse_mode='HTML'
                              )

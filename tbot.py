@@ -17,13 +17,16 @@ from design import (show_main_menu,
                     show_menu_category_items,
                     select_quantity,
                     show_help,
-                    show_feedback, online_pay)
+                    show_feedback,
+                    online_pay,
+                    show_pay_form,)
 from design import (make_menu_categories,
                     make_menu_category_items,
                     make_quantity_dialog,
                     menu_tree_previous,
-                    create_keyboard_variable_rows)
-from payment import process_payment_animation
+                    create_keyboard_variable_rows
+                    )
+#from payment import process_payment_animation
 
 # Инициализация бота и загрузка переменных окружения из .venv/.env
 env_path = os.path.join(os.path.dirname(__file__), ".venv", ".env")
@@ -280,11 +283,6 @@ def clear_chat(message):
 def go_back(message):
     delete_old_message(message)
     user_id = message.from_user.id
-    # if not user_data[user_id]["order_id"]:
-    #     trigger_start(message)
-    #     return False
-    # print(user_data)
-    #usr_data = user_data.get(message.from_user.id)
     if user_data[user_id] is None or user_data[user_id]["step"] is None:
         show_main_menu(bot, message, user_data)
         bot.delete_message(message.chat.id, message.message_id)
@@ -355,7 +353,8 @@ def handle_pay_callback(call):
         if order[-1] == "":
             user_data[user_id]["pay_order"] = order
             bot.delete_message(call.message.chat.id, call.message.message_id)
-            online_pay(bot,call.message,user_data)
+            user_data[user_id]["old_message"] = show_pay_form(bot,call.message,user_data)
+            #online_pay(bot,call.message,user_data)
             # threading.Thread(
             #     target=process_payment_animation,
             #     args=(bot,
@@ -426,8 +425,10 @@ def handle_callback_query(call):
     print(user_data)
 
     if not user_data[user_id]['selected_item']:
-        bot.send_message(call.id, "Сессия была прервана. Используйте нижнее меню")
+        bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
+        bot.delete_message(call.message.chat.id, call.message.message_id)
         trigger_start(call.message)
+        return
 
     if user_data[user_id]["step"] != "Item_quantity":
         bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
@@ -469,6 +470,38 @@ def handle_callback_query(call):
     bot.send_message(call.message.chat.id, text)
     food_order_manager.update_all_orders()
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith('pay_'))
+def handle_callback_query_pay(call):
+    user_id = call.from_user.id
+    method = call.data[len('pay_'):]
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+    if not user_data[user_id]['order_id'] or not user_data[user_id]["pay_order"]:
+        bot.send_message(call.message.chat.id, "Сессия была прервана. Используйте нижнее меню")
+        return
+
+    if method != "cache":
+        online_pay(bot,call.message,user_data)
+        return
+    order = user_data[user_id]["pay_order"]
+    final_message = (f"💰 Отличный выбор! Оплата наличными – это классика! 💵"
+                     f"*Ваш заказ #*[ {order[1]} ]"
+                     f"*{order[3]}!* Пожалуйста, приготовьте сумму: *{order[2]:,.2f}руб.* к оплате."
+                     f" Вы сможете произвести оплату при получении. 🚀🍽️"
+                     f"Если у вас есть вопросы – мы всегда на связи! 📞😊")
+    bot.send_message(call.message.chat.id, final_message, parse_mode = "Markdown")
+    food_order_manager = init_fo_manager()
+    food_order_manager.update_order_status(user_data[user_id]["order_id"], "cash_pending")
+    food_order_manager.db_manager.close()
+
+
+
+    print(f"Callback query from {call.from_user.username or call.from_user.first_name}: {call.data}")
+
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callback_query_unknown(call):
+    print(f"Callback query from {call.from_user.username or call.from_user.first_name}: {call.data}")
 
 
 # Запуск бота
