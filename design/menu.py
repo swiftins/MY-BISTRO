@@ -139,6 +139,7 @@ def show_feedback(bot,message,user_data):
     text = "Мы уже тестируем <b>суперсекретный</b> алгоритм обработки отзывов... 🍕🤖 Пока он учится различать «вкусно» и «очень вкусно», оставайтесь с нами! Скоро запустим! 🚀"
     bot.send_message(message.chat.id, text, parse_mode='HTML')
 
+
 def show_pay_form(bot,message,user_data):
     user_id = message.from_user.id
     keyboard = create_inline_kbd(row_width=2, nums=3, values=["💳Картой 💳","💵 Наличными 💵", "📱 Мобильная оплата 📱"], keys=['Назад',"pay_card","pay_cache","pay_mobile"] )
