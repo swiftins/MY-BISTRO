@@ -80,7 +80,7 @@ def create_tile_kbd(keyboard,
 
     return keyboard
 
-def create_reply_kbd(row_width=2, values=[], back ="X"):
+def create_reply_kbd(row_width=2, values=[], back ="X", keys = []):
     """
     Создает Reply клавиатуру с плиточными кнопками.
 
@@ -92,7 +92,7 @@ def create_reply_kbd(row_width=2, values=[], back ="X"):
     - Reply клавиатуру с добавленными кнопками.
     """
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=row_width)
-    create_tile_kbd(keyboard, row_width=row_width, msg=["Категория ", ""], values=values, back=back)
+    create_tile_kbd(keyboard, row_width=row_width, msg=["Категория ", ""], values=values, back=back, keys = keys)
     return keyboard
 
 def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""], keys=[]):

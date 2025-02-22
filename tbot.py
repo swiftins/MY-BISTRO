@@ -49,7 +49,10 @@ user_data = UsersSession()
 def delete_old_message(message):
     user_id = message.from_user.id
     if user_data[user_id]["old_message"] is not None:
-        bot.delete_message(message.chat.id, user_data[user_id]["old_message"][1])
+        try:
+            bot.delete_message(message.chat.id, user_data[user_id]["old_message"][1])
+        except telebot.apihelper.ApiTelegramException as e:
+            print("Ошибка при удалении сообщения",e)
         user_data[message.from_user.id]["old_message"] = None
 
 
@@ -115,7 +118,15 @@ def help(message):
 def feedback(message):
     delete_old_message(message)
     show_feedback(bot, message, user_data)
-
+# https://github.com/swiftins/MY-BISTRO/blob/OOP-version/webapp/
+# def webapp_feedback(message):
+#     try:
+#         data = json.loads(message.web_app_data.data)
+#         review = data.get("review", "Ошибка при получении отзыва")
+#         bot.send_message(message.chat.id, f"Спасибо за ваш отзыв: {review}")
+#     except Exception as e:
+#         bot.send_message(message.chat.id, "Произошла ошибка при обработке отзыва.")
+#
 
 # Показать меню
 @bot.message_handler(func=lambda message: message.text == 'Меню')
