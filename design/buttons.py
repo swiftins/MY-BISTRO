@@ -1,5 +1,4 @@
 from math import ceil
-import telebot
 from telebot import types
 
 
@@ -11,7 +10,8 @@ def create_tile_kbd(keyboard,
                     splitter="",
                     values=None,
                     back ="❌",
-                    keys = []):
+                    keys = [],
+                    webapp_url = None,):
 
     """
     Универсальная функция для создания плиточной клавиатуры.
@@ -77,10 +77,16 @@ def create_tile_kbd(keyboard,
                 btns.append(btntype(text))
 
         keyboard.row(*btns)
+    if webapp_url and btntype == types.KeyboardButton:
+        webapp_button = btntype(
+            text="Оставить отзыв",
+            web_app=types.WebAppInfo(url=webapp_url)
+        )
+        keyboard.row(webapp_button,btntype(text="Показать отзывы"))
 
     return keyboard
 
-def create_reply_kbd(row_width=2, values=[], back ="X", keys = []):
+def create_reply_kbd(row_width=2, values=[], back ="X", keys = [], webapp_url = None):
     """
     Создает Reply клавиатуру с плиточными кнопками.
 
@@ -92,7 +98,13 @@ def create_reply_kbd(row_width=2, values=[], back ="X", keys = []):
     - Reply клавиатуру с добавленными кнопками.
     """
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=row_width)
-    create_tile_kbd(keyboard, row_width=row_width, msg=["Категория ", ""], values=values, back=back, keys = keys)
+    create_tile_kbd(keyboard,
+                    row_width=row_width,
+                    msg=["Категория ", ""],
+                    values=values,
+                    back=back,
+                    keys = keys,
+                    webapp_url=webapp_url)
     return keyboard
 
 def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""], keys=[]):

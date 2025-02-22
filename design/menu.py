@@ -13,9 +13,14 @@ from payment import process_payment_animation
 # Показать главное меню
 def show_main_menu(bot,message,user_data):
     user_id = message.from_user.id
-    main_menu = ["Меню","Мои заказы", "Отзывы", "Оформить заказ", "Почистить чат","Выйти"]
-    keyboard = create_reply_kbd(row_width=2, values=main_menu, back = None)
-    msg = bot.send_message(message.chat.id, "Выберите действие:", reply_markup=keyboard)
+    main_menu = ["Меню","Мои заказы", "Оформить заказ", "Почистить чат","Выйти"]
+    keyboard = create_reply_kbd(row_width=2,
+                                values=main_menu,
+                                back = None,
+                                webapp_url="https://iiipek.github.io/web_app_form/")
+    msg = bot.send_message(message.chat.id,
+                           "Выберите действие:",
+                           reply_markup=keyboard)
     print(user_data)
     user_data[user_id]["step"]= "Main_menu"
     return msg.chat.id, msg.message_id

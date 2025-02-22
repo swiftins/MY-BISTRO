@@ -1,5 +1,5 @@
 from  dotenv import load_dotenv
-import os
+import json
 from types import SimpleNamespace
 import telebot
 from telebot import types
@@ -145,10 +145,10 @@ def show_menu(message):
 
 @bot.message_handler(func=lambda message: message.text == 'Выйти')
 def close_menu(message):
-    delete_old_message(message)
     bot.delete_message(message.chat.id, message.message_id)
     msg =bot.send_message(message.chat.id, " ", reply_markup=types.ReplyKeyboardRemove())  # Пустое сообщение
-    bot.delete_message(message.chat.id, msg.message_id)
+    #bot.delete_message(message.chat.id, msg.message_id)
+    delete_old_message(message)
 
 
 # Показать блюда в категории
@@ -517,6 +517,18 @@ def handle_callback_query_pay(call):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query_unknown(call):
     print(f"Callback query from {call.from_user.username or call.from_user.first_name}: {call.data}")
+
+@bot.message_handler(content_types=['web_app_data'])
+def webapp_feedback(message):
+    try:
+        data = json.loads(message.web_app_data.data)
+        review = data.get("review", "Ошибка при получении отзыва")
+        rating = data.get("rating", "Не указан")
+
+        response = f"⭐ Оценка: {rating}/5\n💬 Отзыв: {review}"
+        bot.send_message(message.chat.id, response)
+    except Exception as e:
+        bot.send_message(message.chat.id, "Произошла ошибка при обработке отзыва.")
 
 
 # Запуск бота
