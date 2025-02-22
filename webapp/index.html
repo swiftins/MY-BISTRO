@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оставить отзыв</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <h2>Оставьте ваш отзыв</h2>
+    <textarea id="review" rows="5" cols="30" placeholder="Введите ваш отзыв..."></textarea>
+    <button onclick="sendReview()">Отправить</button>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем WebApp
+
+        function sendReview() {
+            let reviewText = document.getElementById("review").value;
+            if (reviewText.trim() === "") {
+                alert("Пожалуйста, напишите отзыв.");
+                return;
+            }
+
+            tg.sendData(JSON.stringify({ review: reviewText })); // Отправка данных в бота
+            tg.close(); // Закрываем WebApp
+        }
+    </script>
+</body>
+</html>
