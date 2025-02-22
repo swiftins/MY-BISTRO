@@ -1,8 +1,11 @@
 import telebot
-import json
+import json, os
+from dotenv import load_dotenv
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
-TOKEN = "ТВОЙ_ТОКЕН"  # Укажи свой токен от BotFather
+env_path = os.path.join(os.path.dirname(__file__), "..", ".venv", ".env")
+load_dotenv(env_path)
+TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
