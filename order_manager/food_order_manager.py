@@ -178,6 +178,27 @@ class FoodOrderManager:
 
         return self.db_manager.fetch_data(query, tuple(params))
 
+    def create_review(self, user_id, review="blank", rating=0):
+        """Создать новый отзыв."""
+        query = """
+            INSERT INTO reviews (user_id, comment, rating)
+            VALUES ((SELECT id FROM users WHERE telegram_id = ?), ?, ?)
+        """
+        params = (user_id, review, rating)
+        return self.db_manager.insert_data(query, params)
+
+    def get_reviews(self):
+        """Получить все отзывы."""
+        query = ("""
+                SELECT
+                datetime(r.created_at,'localtime') as created_at,
+                coalesce(u.first_name,'')||' '|| coalesce(u.last_name,''),
+                r.comment,
+                r.rating
+                FROM reviews as r
+                inner join users u on u.id = r.user_id
+                """)
+        return self.db_manager.fetch_data(query)
 
 def init_fo_manager(db_type='sqlite'):
     db_connector = DBConnector(db_type)

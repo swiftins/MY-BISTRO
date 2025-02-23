@@ -50,7 +50,7 @@ def delete_old_message(message):
     user_id = message.from_user.id
     if user_data[user_id]["old_message"] is not None:
         try:
-            bot.delete_message(message.chat.id, user_data[user_id]["old_message"][1])
+            bot.delete_message(message.chat.id, user_data[user_id]["old_message"])
         except telebot.apihelper.ApiTelegramException as e:
             print("Ошибка при удалении сообщения",e)
         user_data[message.from_user.id]["old_message"] = None
@@ -114,7 +114,7 @@ def help(message):
     delete_old_message(message)
     show_help(bot, message, user_data)
 
-@bot.message_handler(func=lambda message: message.text == 'Отзывы')
+@bot.message_handler(func=lambda message: message.text == 'Показать отзывы')
 def feedback(message):
     delete_old_message(message)
     show_feedback(bot, message, user_data)
@@ -146,8 +146,8 @@ def show_menu(message):
 @bot.message_handler(func=lambda message: message.text == 'Выйти')
 def close_menu(message):
     bot.delete_message(message.chat.id, message.message_id)
-    msg =bot.send_message(message.chat.id, " ", reply_markup=types.ReplyKeyboardRemove())  # Пустое сообщение
-    #bot.delete_message(message.chat.id, msg.message_id)
+    msg =bot.send_message(message.chat.id, "->", reply_markup=types.ReplyKeyboardRemove())  # Пустое сообщение
+    bot.delete_message(message.chat.id, msg.message_id)
     delete_old_message(message)
 
 
@@ -160,7 +160,7 @@ def show_category_items(message):
     if not user_data[user_id]:
         trigger_start(message)
         return False
-    user_data[user_id]["old_message"] == make_menu_category_items(bot, message, user_data)
+    user_data[user_id]["old_message"] = make_menu_category_items(bot, message, user_data)
     print(user_data[user_id])
 
 
@@ -369,17 +369,7 @@ def handle_pay_callback(call):
             user_data[user_id]["pay_order"] = order
             bot.delete_message(call.message.chat.id, call.message.message_id)
             user_data[user_id]["old_message"] = show_pay_form(bot,call.message,user_data)
-            #online_pay(bot,call.message,user_data)
-            # threading.Thread(
-            #     target=process_payment_animation,
-            #     args=(bot,
-            #           call.message,
-            #           order[1],
-            #           order[3],
-            #           order[2],
-            #           order_id
-            #           )
-            # ).start()
+
 
     else:
         bot.delete_message(call.message.chat.id, call.message.message_id)
@@ -524,9 +514,13 @@ def webapp_feedback(message):
         data = json.loads(message.web_app_data.data)
         review = data.get("review", "Ошибка при получении отзыва")
         rating = data.get("rating", "Не указан")
-
-        response = f"⭐ Оценка: {rating}/5\n💬 Отзыв: {review}"
-        bot.send_message(message.chat.id, response)
+        user_id = message.from_user.id
+        food_order_manager = init_fo_manager()
+        result = food_order_manager.create_review(user_id, review, rating)
+        if result:
+            user_data[user_id]["old_message"] = bot.send_message(message.chat.id, "Отзыв успешно отправлен!")
+        else:
+            user_data[user_id]["old_message"] = bot.send_message(message.chat.id, "Произошла ошибка при отправке отзыва.")
     except Exception as e:
         bot.send_message(message.chat.id, "Произошла ошибка при обработке отзыва.")
 

@@ -139,11 +139,23 @@ def show_help(bot,message,user_data):
     bot.send_message(message.chat.id, help_text, parse_mode='Markdown')
     bot.delete_message(message.chat.id, message.message_id)
 
-def show_feedback(bot,message,user_data):
+def show_feedback(bot,message,user_data,result=None):
     bot.delete_message(message.chat.id, message.message_id)
-    text = "Мы уже тестируем <b>суперсекретный</b> алгоритм обработки отзывов... 🍕🤖 Пока он учится различать «вкусно» и «очень вкусно», оставайтесь с нами! Скоро запустим! 🚀"
-    bot.send_message(message.chat.id, text, parse_mode='HTML')
+    width = 29
+    food_order_manager = init_fo_manager()
+    result = food_order_manager.get_reviews()
+    user_id = message.from_user.id
+    if not result or len(result) == 0:
+        user_data[user_id]["old_message"] = bot.send_message(message.chat.id, "Нет отзывов")
+        return
+    text = f"🤖Отзывы:🤖\n{'='*width}\n"
+    for row in result:
+        text += f"<b>{row[0]}\n {row[1]} : оценка :{row[3]}⭐</b>\n{"="*width}\n<i>{row[2]}</i>\n{"="*width}\n"
+    user_data[user_id]["old_message"] = bot.send_message(message.chat.id, text, parse_mode='HTML')
+    # text = "Мы уже тестируем <b>суперсекретный</b> алгоритм обработки отзывов... 🍕🤖 Пока он учится различать «вкусно» и «очень вкусно», оставайтесь с нами! Скоро запустим! 🚀"
+    # bot.send_message(message.chat.id, text, parse_mode='HTML')
 
+    food_order_manager = init_fo_manager()
 
 def show_pay_form(bot,message,user_data):
     user_id = message.from_user.id
