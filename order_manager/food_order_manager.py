@@ -116,7 +116,7 @@ class FoodOrderManager:
     def update_order_status(self, order_id, status):
         """Обновить статус заказа."""
         text = ""
-        if status != "pending":
+        if status == "paid":
             text = f", {status}_at = CURRENT_TIMESTAMP"
         query = (f"""UPDATE orders
                  SET status = ? {text}
@@ -155,8 +155,9 @@ class FoodOrderManager:
         (SUBSTR(u.first_name, 1, 1) || SUBSTR(u.last_name, 1, 1) || strftime('%Y%m%d%H%M', datetime(o.created_at))) as order_num,
         SUM(oi.quantity * mi.price) as total,
         (u.first_name||' '||u.last_name) as full_name,
-        o.created_at,
-        coalesce(o.payed_at,"") as payed_at
+        datetime(o.created_at,'localtime') as created_at,
+        coalesce(datetime(o.paid_at,'localtime'),"") as paid_at,
+        o.status
         FROM orders as o
         INNER JOIN users as u on u.telegram_id = o.user_id
         LEFT JOIN order_items as oi on o.id = oi.order_id
@@ -177,6 +178,27 @@ class FoodOrderManager:
 
         return self.db_manager.fetch_data(query, tuple(params))
 
+    def create_review(self, user_id, review="blank", rating=0):
+        """Создать новый отзыв."""
+        query = """
+            INSERT INTO reviews (user_id, comment, rating)
+            VALUES ((SELECT id FROM users WHERE telegram_id = ?), ?, ?)
+        """
+        params = (user_id, review, rating)
+        return self.db_manager.insert_data(query, params)
+
+    def get_reviews(self):
+        """Получить все отзывы."""
+        query = ("""
+                SELECT
+                datetime(r.created_at,'localtime') as created_at,
+                coalesce(u.first_name,'')||' '|| coalesce(u.last_name,''),
+                r.comment,
+                r.rating
+                FROM reviews as r
+                inner join users u on u.id = r.user_id
+                """)
+        return self.db_manager.fetch_data(query)
 
 def init_fo_manager(db_type='sqlite'):
     db_connector = DBConnector(db_type)

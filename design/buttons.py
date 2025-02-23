@@ -1,6 +1,7 @@
 from math import ceil
-import telebot
 from telebot import types
+
+
 
 def create_tile_kbd(keyboard,
                     row_width=1,
@@ -8,7 +9,9 @@ def create_tile_kbd(keyboard,
                     msg=["", "",],
                     splitter="",
                     values=None,
-                    back ="❌"):
+                    back ="❌",
+                    keys = [],
+                    webapp_url = None,):
 
     """
     Универсальная функция для создания плиточной клавиатуры.
@@ -22,6 +25,7 @@ def create_tile_kbd(keyboard,
     - splitter: Разделитель между частями текста кнопки (по умолчанию "").
     - values: Список значений для текста кнопок или одиночное значение (по умолчанию None).
     - back: Если не None, то 0-ое значение заменяется на значение back
+    - keys: Значения callback для Inline кнопок, присваиваются, если не None
 
     Возвращает:
     - Клавиатуру с добавленными кнопками.
@@ -66,15 +70,23 @@ def create_tile_kbd(keyboard,
 
             # Если это Inline кнопка, добавляем callback_data
             if btntype == types.InlineKeyboardButton:
+                if val <= len(keys) -1:
+                    val = keys[val]
                 btns.append(btntype(text, callback_data=f"{val}"))
             else:
                 btns.append(btntype(text))
 
         keyboard.row(*btns)
+    if webapp_url and btntype == types.KeyboardButton:
+        webapp_button = btntype(
+            text="Оставить отзыв",
+            web_app=types.WebAppInfo(url=webapp_url)
+        )
+        keyboard.row(webapp_button,btntype(text="Показать отзывы"))
 
     return keyboard
 
-def create_reply_kbd(row_width=2, values=[], back ="X"):
+def create_reply_kbd(row_width=2, values=[], back ="X", keys = [], webapp_url = None):
     """
     Создает Reply клавиатуру с плиточными кнопками.
 
@@ -86,10 +98,16 @@ def create_reply_kbd(row_width=2, values=[], back ="X"):
     - Reply клавиатуру с добавленными кнопками.
     """
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=row_width)
-    create_tile_kbd(keyboard, row_width=row_width, msg=["Категория ", ""], values=values, back=back)
+    create_tile_kbd(keyboard,
+                    row_width=row_width,
+                    msg=["Категория ", ""],
+                    values=values,
+                    back=back,
+                    keys = keys,
+                    webapp_url=webapp_url)
     return keyboard
 
-def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""]):
+def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""], keys=[]):
     """
     Создает Inline клавиатуру с плиточными кнопками.
 
@@ -102,9 +120,10 @@ def create_inline_kbd(row_width=3, nums=3, values=None,msg=["",""]):
     - Inline клавиатуру с добавленными кнопками.
     """
     keyboard = types.InlineKeyboardMarkup( row_width=row_width)
-    create_tile_kbd(keyboard, row_width=row_width, nums=nums, msg=msg, values=values)
+    create_tile_kbd(keyboard, row_width=row_width, nums=nums, msg=msg, values=values, keys = keys)
     return keyboard
 
+# формируем клавиатуру с кнопками из массива строк
 def create_keyboard_variable_rows(data):
     keyboard = types.InlineKeyboardMarkup(row_width=len(data[0])+1)
     for index, row in enumerate(data):
