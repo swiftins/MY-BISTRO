@@ -12,7 +12,7 @@ class DBConnector:
         if self.db_type == 'sqlite':
             self.connection = sqlite3.connect(DB_CONFIG['sqlite']['database'])
         elif self.db_type == 'postgresql':
-            self.connection = psycopg2.connect(
+            self.connection = psycopg.connect(
                 dbname=DB_CONFIG['postgresql']['database'],
                 user=DB_CONFIG['postgresql']['user'],
                 password=DB_CONFIG['postgresql']['password'],
